@@ -1,0 +1,8 @@
+openai
+langchain
+python-dotenv
+spotipy
+rich
+click
+pydantic
+tqdm
