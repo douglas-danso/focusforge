@@ -1,5 +1,0 @@
-Break down the following task into focused blocks of work, each about 25 minutes (a Pomodoro block).
-Task: {task}
-Total Duration: {duration} minutes
-
-Output a numbered list with concise, actionable goals.

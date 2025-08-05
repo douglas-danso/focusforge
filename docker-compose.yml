@@ -1,12 +1,108 @@
+# DEPRECATED: This file is kept for backward compatibility
+# Use the new service-specific compose files instead:
+# - docker-compose.backend.yml (Backend + Database + Cache)
+# - docker-compose.frontend.yml (Frontend only)
+# - docker-compose.mobile.yml (Mobile development)
+# - docker-compose.prod.yml (Full production setup with gateway)
+
 version: "3.9"
 services:
-  focusforge:
-    build: .
+  # Backend API - Now decoupled
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: focusforge-backend
+    ports:
+      - "8000:8000"
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - SPOTIPY_CLIENT_ID=${SPOTIPY_CLIENT_ID}
       - SPOTIPY_CLIENT_SECRET=${SPOTIPY_CLIENT_SECRET}
       - SPOTIPY_REDIRECT_URI=${SPOTIPY_REDIRECT_URI}
+      - MONGODB_URI=mongodb://mongo:27017/focusforge
+      - DATABASE_NAME=focusforge
+      - CORS_ORIGINS=http://localhost:3000,http://localhost:3001
     volumes:
-      - ./data:/app/data
-    tty: true
+      - ./backend:/app
+    networks:
+      - app-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # React Frontend - Now decoupled
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: focusforge-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:8000/api/v1
+      - REACT_APP_WEBSOCKET_URL=ws://localhost:8000/ws
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    networks:
+      - app-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # MongoDB Database - Now optional
+  mongo:
+    image: mongo:6.0
+    container_name: focusforge-mongo
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    environment:
+      - MONGO_INITDB_DATABASE=focusforge
+    networks:
+      - app-network
+
+  # Redis for caching - Now optional
+  redis:
+    image: redis:7-alpine
+    container_name: focusforge-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - app-network
+
+volumes:
+  mongo_data:
+  redis_data:
+
+networks:
+  app-network:
+    driver: bridge
+
+# Migration Notice:
+# This docker-compose.yml is deprecated in favor of service-specific files:
+# 
+# For development:
+# - Backend only: docker-compose -f docker-compose.backend.yml up -d
+# - Frontend only: docker-compose -f docker-compose.frontend.yml up -d  
+# - Mobile dev: docker-compose -f docker-compose.mobile.yml up -d
+# 
+# For production:
+# - Full stack: docker-compose -f docker-compose.prod.yml up -d
+#
+# Or use the individual startup scripts:
+# - .\start-backend.ps1 (Windows) or ./start-backend.sh (Linux/Mac)
+# - .\start-frontend.ps1 (Windows) or ./start-frontend.sh (Linux/Mac)
+# - .\start-mobile.ps1 (Windows) or ./start-mobile.sh (Linux/Mac)

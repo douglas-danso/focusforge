@@ -1,0 +1,67 @@
+version: "3.9"
+
+services:
+  # Backend API - Standalone
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: focusforge-backend
+    ports:
+      - "8004:8000"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - SPOTIPY_CLIENT_ID=${SPOTIPY_CLIENT_ID}
+      - SPOTIPY_CLIENT_SECRET=${SPOTIPY_CLIENT_SECRET}
+      - SPOTIPY_REDIRECT_URI=${SPOTIPY_REDIRECT_URI}
+      - MONGODB_URI=${MONGODB_URI:-mongodb://localhost:27017/focusforge}
+      - REDIS_URL=${REDIS_URL:-redis://localhost:6379}
+      - DATABASE_NAME=${DATABASE_NAME:-focusforge}
+      - CORS_ORIGINS=${CORS_ORIGINS:-*}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-your-super-secret-jwt-key}
+      - API_V1_STR=/api/v1
+    networks:
+      - backend-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8004/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # MongoDB Database - Backend Only
+  mongo:
+    image: mongo:6.0
+    container_name: focusforge-mongo
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    environment:
+      - MONGO_INITDB_DATABASE=${DATABASE_NAME:-focusforge}
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_ROOT_USERNAME:-}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_ROOT_PASSWORD:-}
+    networks:
+      - backend-network
+
+  # Redis - Backend Only
+  redis:
+    image: redis:7-alpine
+    container_name: focusforge-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - backend-network
+    command: redis-server --appendonly yes
+
+volumes:
+  mongo_data:
+  redis_data:
+
+networks:
+  backend-network:
+    driver: bridge

@@ -1,0 +1,33 @@
+# FocusForge Mobile Development Dockerfile
+FROM cirrusci/flutter:stable
+
+# Set working directory
+WORKDIR /app
+
+# Install additional dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    git \
+    unzip \
+    xz-utils \
+    zip \
+    libglu1-mesa \
+    && rm -rf /var/lib/apt/lists/*
+
+# Enable Flutter web
+RUN flutter config --enable-web
+
+# Copy pubspec files
+COPY pubspec.yaml pubspec.lock ./
+
+# Install Flutter dependencies
+RUN flutter pub get
+
+# Copy the rest of the app
+COPY . .
+
+# Expose ports for Flutter web
+EXPOSE 3000 8080
+
+# Default command
+CMD ["flutter", "run", "-d", "web-server", "--web-port=3000", "--web-hostname=0.0.0.0"]
