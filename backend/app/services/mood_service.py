@@ -15,7 +15,7 @@ class MoodService:
             "user_id": user_id,
             "feeling": mood_data.feeling,
             "note": mood_data.note or "",
-            "timestamp": datetime.utcnow()
+            "timestamp": datetime.now()
         }
         
         result = await self.collection.insert_one(mood_dict)
@@ -49,7 +49,7 @@ class MoodService:
     
     async def reset_today_logs(self, user_id: str) -> int:
         """Reset today's mood logs"""
-        today = datetime.utcnow().date()
+        today = datetime.now().date()
         start_of_day = datetime.combine(today, datetime.min.time())
         end_of_day = datetime.combine(today, datetime.max.time())
         
@@ -78,16 +78,13 @@ class MoodService:
             return 0
         
         sorted_dates = sorted(dates, reverse=True)
-        today = datetime.utcnow().date()
+        today = datetime.now().date()
         
         streak = 0
         current_date = today
         
         for date in sorted_dates:
             if date == current_date:
-                streak += 1
-                current_date -= timedelta(days=1)
-            elif date == current_date:
                 streak += 1
                 current_date -= timedelta(days=1)
             else:

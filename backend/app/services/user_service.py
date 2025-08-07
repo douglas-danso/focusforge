@@ -38,8 +38,8 @@ class UserService:
             "full_name": user_data.full_name,
             "hashed_password": self._hash_password(user_data.password),
             "is_active": True,
-            "created_at": datetime.utcnow(),
-            "updated_at": datetime.utcnow()
+            "created_at": datetime.now(),
+            "updated_at": datetime.now()
         }
         
         result = await self.collection.insert_one(user_dict)
@@ -107,3 +107,13 @@ class UserService:
         # Remove password from response
         del user_doc["hashed_password"]
         return User(**user_doc)
+
+    async def get_all_users(self, limit: int = 100) -> List[User]:
+        """Get all users"""
+        cursor = self.collection.find().limit(limit)
+        users = []
+        async for user_doc in cursor:
+            user_doc["_id"] = str(user_doc["_id"])
+            del user_doc["hashed_password"]
+            users.append(User(**user_doc))
+        return users

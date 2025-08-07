@@ -32,7 +32,7 @@ OPENAI_API_KEY=your-openai-api-key-here
 SPOTIPY_CLIENT_ID=your-spotify-client-id
 SPOTIPY_CLIENT_SECRET=your-spotify-client-secret
 SPOTIPY_REDIRECT_URI=http://localhost:8000/callback
-MONGODB_URI=mongodb://localhost:27017/focusforge
+MONGODB_URI=mongodb://mongo:27017/focusforge
 DATABASE_NAME=focusforge
 JWT_SECRET_KEY=your-super-secret-jwt-key-change-this-in-production
 "@
@@ -45,9 +45,9 @@ JWT_SECRET_KEY=your-super-secret-jwt-key-change-this-in-production
 }
 
 Write-Host "Backend Service Configuration:" -ForegroundColor Cyan
-Write-Host "   - API Port: 8000" -ForegroundColor White
-Write-Host "   - Database: MongoDB (localhost:27017)" -ForegroundColor White
-Write-Host "   - Cache: Redis (localhost:6379)" -ForegroundColor White
+Write-Host "   - API Port: 8004" -ForegroundColor White
+Write-Host "   - Database: MongoDB (mongo:27017)" -ForegroundColor White
+Write-Host "   - Cache: Redis (redis:6379)" -ForegroundColor White
 Write-Host "   - Environment: focusforge" -ForegroundColor White
 
 # Start backend services
@@ -98,7 +98,7 @@ if (-not $SkipHealthCheck) {
     # Check MongoDB
     try {
         docker exec focusforge-mongo mongosh --eval "db.adminCommand('ping')" | Out-Null
-        Write-Host "SUCCESS: MongoDB is running on localhost:27017" -ForegroundColor Green
+        Write-Host "SUCCESS: MongoDB is running on mongo:27017" -ForegroundColor Green
     }
     catch {
         Write-Host "ERROR: MongoDB is not responding" -ForegroundColor Red
@@ -107,7 +107,7 @@ if (-not $SkipHealthCheck) {
     # Check Redis
     try {
         docker exec focusforge-redis redis-cli ping | Out-Null
-        Write-Host "SUCCESS: Redis is running on localhost:6379" -ForegroundColor Green
+        Write-Host "SUCCESS: Redis is running on redis:6379" -ForegroundColor Green
     }
     catch {
         Write-Host "ERROR: Redis is not responding" -ForegroundColor Red

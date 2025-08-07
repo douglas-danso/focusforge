@@ -49,3 +49,17 @@ async def update_user(
         return user
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/", response_model=List[User])
+async def get_all_users(
+    limit: int = 100,
+    db=Depends(get_database)
+):
+    """Get all users"""
+    try:
+        user_service = UserService(db)
+        users = await user_service.get_all_users(limit)
+        return users
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

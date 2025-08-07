@@ -5,6 +5,7 @@ WORKDIR /app
 # Update system packages, install dependencies, and install Hatch
 RUN apt-get update && apt-get install -y \
     gcc \
+    curl \
     && apt-get upgrade -y \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
@@ -22,5 +23,5 @@ RUN hatch env create
 # Expose port
 EXPOSE 8000
 
-# Use Hatch to run the application
-CMD ["hatch", "run", "start"]
+# Use Hatch dev script for development with auto-reload
+CMD ["hatch", "run", "dev"]

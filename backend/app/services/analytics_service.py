@@ -47,7 +47,7 @@ class AnalyticsService:
             return 0
         
         sorted_dates = sorted(dates, reverse=True)
-        today = datetime.utcnow().date()
+        today = datetime.now().date()
         
         streak = 0
         current_date = today

@@ -14,7 +14,7 @@ class PomodoroService:
             "user_id": user_id,
             "task_id": session_data.task_id,
             "duration_minutes": session_data.duration_minutes,
-            "started_at": datetime.utcnow(),
+            "started_at": datetime.now(),
             "completed_at": None,
             "is_completed": False
         }
@@ -29,7 +29,7 @@ class PomodoroService:
             result = await self.collection.find_one_and_update(
                 {"_id": ObjectId(session_id), "user_id": user_id},
                 {"$set": {
-                    "completed_at": datetime.utcnow(),
+                    "completed_at": datetime.now(),
                     "is_completed": True
                 }},
                 return_document=True

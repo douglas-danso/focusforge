@@ -5,10 +5,15 @@ from app.core.database import get_database
 
 router = APIRouter()
 
+@router.get("/health")
+async def health_check():
+    """Health check endpoint"""
+    return {"status": "healthy"}
+    
 @router.post("/play/{playlist_uri}")
 async def play_playlist(
     playlist_uri: str,
-    user_id: str = "default",  # TODO: Get from auth
+    user_id: str = "default",
 ):
     """Play a Spotify playlist"""
     try:
@@ -20,7 +25,7 @@ async def play_playlist(
 
 @router.post("/pause")
 async def pause_playback(
-    user_id: str = "default",  # TODO: Get from auth
+    user_id: str = "default",
 ):
     """Pause Spotify playback"""
     try:
