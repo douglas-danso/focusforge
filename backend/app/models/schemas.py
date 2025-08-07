@@ -397,3 +397,119 @@ def calculate_level_from_earnings(total_earned: int) -> int:
 def get_next_level_threshold(current_level: int) -> int:
     """Get points needed for next level"""
     return (current_level ** 2) * 100
+
+# ===== AGENTIC ARCHITECTURE SCHEMAS =====
+
+class TaskBreakdownBlock(BaseModel):
+    """Individual task block from TaskBreakdownAgent"""
+    block_number: int
+    title: str
+    description: str
+    estimated_minutes: int
+    completion_criteria: str
+    energy_level: str  # low, medium, high
+    dependencies: List[str] = []
+
+class TaskAnalysis(BaseModel):
+    """Analysis from TaskWeightingAgent"""
+    difficulty_score: float
+    reasoning: str
+    complexity_factors: List[str]
+    recommended_breaks: int
+    energy_type: str  # analytical, creative, physical
+    procrastination_risk: str  # low, medium, high
+    motivation_tips: List[str]
+
+class ProofValidation(BaseModel):
+    """Validation result from ProofVerificationAgent"""
+    valid: bool
+    confidence_score: float
+    reasoning: str
+    feedback: str
+    suggestions: List[str]
+
+class ProductivityRitual(BaseModel):
+    """Ritual suggestion from RitualAdvisorAgent"""
+    ritual_name: str
+    duration_minutes: int
+    steps: List[Dict[str, Any]]
+    spotify_suggestion: Optional[Dict[str, str]] = None
+    why_this_works: str
+    variations: List[str] = []
+
+class AgentGuidance(BaseModel):
+    """Comprehensive guidance from all agents"""
+    analysis: TaskAnalysis
+    breakdown: List[TaskBreakdownBlock]
+    motivation: str
+    ritual: ProductivityRitual
+
+class AgentRecommendations(BaseModel):
+    """High-level recommendations from agent coordination"""
+    difficulty_score: float
+    recommended_approach: str
+    procrastination_risk: str
+    suggested_blocks: int
+    ritual_duration: int
+
+class ComprehensiveTaskGuidance(BaseModel):
+    """Complete response from comprehensive task guidance"""
+    success: bool
+    guidance: AgentGuidance
+    agent_recommendations: AgentRecommendations
+
+class MoodInsights(BaseModel):
+    """Enhanced mood insights for agents"""
+    current_mood: str
+    previous_mood: Optional[str] = None
+    recent_trend: str  # improving, declining, stable
+    volatility: str    # low, medium, high
+    needs_support: bool
+    high_energy: bool
+    insights: List[str]
+
+class UserContext(BaseModel):
+    """User context for agent personalization"""
+    skill_level: str
+    current_mood: str
+    mood_trend: str
+    needs_support: bool
+    high_energy: bool
+    time_of_day: str
+    preferences: Dict[str, Any]
+    recent_tasks: List[Dict[str, Any]]
+    completion_rate: float
+    avg_difficulty: float
+    total_completed: int
+    mood_volatility: str
+    recent_moods: List[str]
+
+# Agent request/response schemas
+class TaskBreakdownRequest(BaseModel):
+    task_data: Dict[str, Any]
+    user_context: Optional[UserContext] = None
+    detailed: bool = False
+
+class MotivationRequest(BaseModel):
+    user_context: UserContext
+    mood: str = "neutral"
+    challenge: str = ""
+    task_history: Optional[List[Dict[str, Any]]] = None
+
+class ProofValidationRequest(BaseModel):
+    task_description: str
+    proof_text: str
+    completion_criteria: str = ""
+
+class RitualRequest(BaseModel):
+    mood: str = "neutral"
+    task_type: str = "general"
+    time_of_day: str = "morning"
+    preferences: Dict[str, Any] = {}
+    past_rituals: List[Dict[str, Any]] = []
+
+class AgentResponse(BaseModel):
+    """Base response for all agent interactions"""
+    success: bool
+    timestamp: datetime = Field(default_factory=datetime.now)
+    error: Optional[str] = None
