@@ -3,6 +3,7 @@ from langchain.prompts import PromptTemplate
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
 from app.core.config import settings
+from app.mcp.client import mcp_client, MCPSession
 import json
 import logging
 
@@ -18,14 +19,21 @@ class LLMService:
     - TaskWeightingAgent: Estimates task difficulty and complexity
     - ProofVerificationAgent: Validates task completion proofs
     - RitualAdvisorAgent: Recommends personalized productivity rituals
+    
+    Now enhanced with MCP (Model Context Protocol) integration for better
+    context management and standardized tool access.
     """
     
-    def __init__(self):
+    def __init__(self, use_mcp: bool = True):
+        """Initialize LLM service with optional MCP integration"""
         self.llm = ChatOpenAI(
             api_key=settings.OPENAI_API_KEY,
             model_name=settings.OPENAI_MODEL,
             temperature=settings.TEMPERATURE
         )
+        
+        # MCP integration toggle
+        self.use_mcp = use_mcp
         
         # Simple conversation history storage (in production, would use proper memory management)
         self.conversation_history = {
@@ -636,6 +644,171 @@ Make it practical, science-based, and personally relevant to their situation."""
             "pattern": "consistent",  # Placeholder
             "total_completed": len(completed_tasks)
         }
+    
+    # ===== MCP ENHANCED METHODS =====
+    
+    async def decompose_task_mcp(self, task_description: str, duration_minutes: int, 
+                                user_context: Optional[Dict] = None) -> List[Dict[str, Any]]:
+        """Enhanced task decomposition using MCP if available"""
+        if self.use_mcp:
+            try:
+                async with MCPSession() as mcp:
+                    result = await mcp.get_task_breakdown(
+                        title=task_description.split(":")[0],
+                        description=task_description.split(":", 1)[1] if ":" in task_description else "",
+                        duration_minutes=duration_minutes,
+                        user_context=user_context
+                    )
+                    
+                    if result.get("success"):
+                        return result.get("breakdown", [])
+                    else:
+                        logger.warning(f"MCP task breakdown failed: {result.get('error')}")
+            except Exception as e:
+                logger.error(f"MCP task breakdown error: {e}")
+        
+        # Fallback to direct LLM call
+        return await self.decompose_task_detailed(task_description, duration_minutes, user_context)
+    
+    async def get_task_analysis_mcp(self, task_title: str, description: str, 
+                                   duration_minutes: int, user_skill_level: str = "intermediate") -> Dict[str, Any]:
+        """Enhanced task analysis using MCP if available"""
+        if self.use_mcp:
+            try:
+                async with MCPSession() as mcp:
+                    result = await mcp.get_task_analysis(
+                        title=task_title,
+                        description=description,
+                        duration_minutes=duration_minutes,
+                        user_skill_level=user_skill_level
+                    )
+                    
+                    if result.get("success"):
+                        return result.get("analysis", {})
+                    else:
+                        logger.warning(f"MCP task analysis failed: {result.get('error')}")
+            except Exception as e:
+                logger.error(f"MCP task analysis error: {e}")
+        
+        # Fallback to direct LLM call
+        return await self.get_task_analysis(task_title, description, duration_minutes, user_skill_level)
+    
+    async def get_motivational_message_mcp(self, user_id: str, user_context: Dict[str, Any], 
+                                          mood: str, current_challenge: str = "") -> str:
+        """Enhanced motivation using MCP if available"""
+        if self.use_mcp:
+            try:
+                async with MCPSession() as mcp:
+                    result = await mcp.get_motivation(
+                        user_id=user_id,
+                        current_mood=mood,
+                        challenge=current_challenge,
+                        context=user_context
+                    )
+                    
+                    if result.get("success"):
+                        return result.get("motivation", "")
+                    else:
+                        logger.warning(f"MCP motivation failed: {result.get('error')}")
+            except Exception as e:
+                logger.error(f"MCP motivation error: {e}")
+        
+        # Fallback to direct LLM call
+        return await self.get_motivational_message(user_context, mood, [], current_challenge)
+    
+    async def validate_task_proof_mcp(self, task_description: str, proof_text: str, 
+                                     completion_criteria: str = "") -> Dict[str, Any]:
+        """Enhanced proof validation using MCP if available"""
+        if self.use_mcp:
+            try:
+                async with MCPSession() as mcp:
+                    result = await mcp.validate_proof(
+                        task_description=task_description,
+                        proof_text=proof_text,
+                        completion_criteria=completion_criteria
+                    )
+                    
+                    if result.get("success"):
+                        return result.get("validation", {})
+                    else:
+                        logger.warning(f"MCP proof validation failed: {result.get('error')}")
+            except Exception as e:
+                logger.error(f"MCP proof validation error: {e}")
+        
+        # Fallback to direct LLM call
+        return await self.validate_task_proof(task_description, proof_text, completion_criteria)
+    
+    async def suggest_ritual_mcp(self, user_mood: str, task_type: str, 
+                                time_of_day: str, user_preferences: Dict = None) -> Dict[str, Any]:
+        """Enhanced ritual suggestion using MCP if available"""
+        if self.use_mcp:
+            try:
+                async with MCPSession() as mcp:
+                    result = await mcp.get_ritual_suggestion(
+                        user_mood=user_mood,
+                        task_type=task_type,
+                        time_of_day=time_of_day,
+                        preferences=user_preferences or {}
+                    )
+                    
+                    if result.get("success"):
+                        return result.get("ritual", {})
+                    else:
+                        logger.warning(f"MCP ritual suggestion failed: {result.get('error')}")
+            except Exception as e:
+                logger.error(f"MCP ritual suggestion error: {e}")
+        
+        # Fallback to direct LLM call
+        return await self.suggest_ritual(user_mood, task_type, time_of_day, user_preferences, [])
+    
+    async def get_comprehensive_task_guidance_mcp(self, user_id: str, task_data: Dict[str, Any], 
+                                                 user_context: Dict[str, Any]) -> Dict[str, Any]:
+        """Enhanced comprehensive guidance using MCP if available"""
+        if self.use_mcp:
+            try:
+                async with MCPSession() as mcp:
+                    result = await mcp.get_comprehensive_guidance(
+                        user_id=user_id,
+                        task_data=task_data,
+                        user_context=user_context
+                    )
+                    
+                    if result.get("success"):
+                        return result.get("guidance", {})
+                    else:
+                        logger.warning(f"MCP comprehensive guidance failed: {result.get('error')}")
+            except Exception as e:
+                logger.error(f"MCP comprehensive guidance error: {e}")
+        
+        # Fallback to direct LLM call
+        return await self.get_comprehensive_task_guidance(task_data, user_context)
+    
+    def toggle_mcp(self, enabled: bool):
+        """Toggle MCP integration on/off"""
+        self.use_mcp = enabled
+        logger.info(f"MCP integration {'enabled' if enabled else 'disabled'}")
+    
+    async def get_mcp_status(self) -> Dict[str, Any]:
+        """Get MCP connection status and available tools"""
+        if not self.use_mcp:
+            return {"enabled": False, "connected": False, "tools": []}
+        
+        try:
+            async with MCPSession() as mcp:
+                tools = await mcp.list_tools()
+                return {
+                    "enabled": True,
+                    "connected": mcp.connected,
+                    "tools": tools,
+                    "tool_count": len(tools)
+                }
+        except Exception as e:
+            return {
+                "enabled": True,
+                "connected": False,
+                "error": str(e),
+                "tools": []
+            }
     
     def _analyze_ritual_effectiveness(self, ritual_history: List[Dict]) -> Dict[str, Any]:
         """Analyze which rituals work best for the user"""
