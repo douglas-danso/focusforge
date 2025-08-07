@@ -11,11 +11,16 @@ services:
       - ./backend/app:/app/app
       - ./backend/main.py:/app/main.py
       - ./backend/.env:/app/.env
+      # Add Spotify data persistence
+      - spotify_data:/app/data
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - SPOTIPY_CLIENT_ID=${SPOTIPY_CLIENT_ID}
       - SPOTIPY_CLIENT_SECRET=${SPOTIPY_CLIENT_SECRET}
-      - SPOTIPY_REDIRECT_URI=${SPOTIPY_REDIRECT_URI}
+      - SPOTIPY_REDIRECT_URI=${SPOTIPY_REDIRECT_URI:-http://localhost:8080/callback}
+      # Add Spotify-specific environment variables
+      - SPOTIFY_CACHE_PATH=/app/data/.spotify_cache
+      - SPOTIFY_SCOPE=${SPOTIFY_SCOPE:-user-read-playback-state user-modify-playback-state playlist-read-private playlist-modify-public}
       - MONGODB_URI=${MONGODB_URI:-mongodb://mongo:27017/focusforge}
       - REDIS_URL=${REDIS_URL:-redis://redis:6379}
       - DATABASE_NAME=${DATABASE_NAME:-focusforge}
@@ -66,6 +71,7 @@ services:
 volumes:
   mongo_data:
   redis_data:
+  spotify_data:
 
 networks:
   backend-network:

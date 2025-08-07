@@ -11,6 +11,9 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/* \
     && pip install --upgrade pip hatch
 
+# Create data directory for Spotify cache and other persistent data
+RUN mkdir -p /app/data && chmod 777 /app/data
+
 # Copy project files
 COPY README.md ./
 COPY pyproject.toml ./

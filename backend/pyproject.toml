@@ -85,8 +85,8 @@ dependencies = [
 ]
 
 [tool.hatch.envs.default.scripts]
-start = "uvicorn main:app --host 0.0.0.0 --port 8000"
-dev = "uvicorn main:app --reload --host 0.0.0.0 --port 8000"
+start = "uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
+dev = "uvicorn main:app --reload --host 0.0.0.0 --port 8000 "
 test = "pytest {args:tests}"
 test-cov = "pytest --cov=app --cov-report=html --cov-report=term-missing {args:tests}"
 lint = [

@@ -18,8 +18,8 @@ class TaskService:
             "duration_minutes": task_data.duration_minutes,
             "break_minutes": task_data.break_minutes,
             "blocks": blocks or [],
-            "created_at": datetime.utcnow(),
-            "updated_at": datetime.utcnow(),
+            "created_at": datetime.now(),
+            "updated_at": datetime.now(),
             "completed_at": None
         }
         
@@ -58,10 +58,10 @@ class TaskService:
         """Update a task"""
         try:
             update_data = {k: v for k, v in task_update.dict(exclude_unset=True).items() if v is not None}
-            update_data["updated_at"] = datetime.utcnow()
+            update_data["updated_at"] = datetime.now()
             
             if task_update.status == TaskStatus.completed:
-                update_data["completed_at"] = datetime.utcnow()
+                update_data["completed_at"] = datetime.now()
             
             result = await self.collection.find_one_and_update(
                 {"_id": ObjectId(task_id), "user_id": user_id},

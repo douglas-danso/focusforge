@@ -104,7 +104,7 @@ class AnalyticsService:
     
     async def get_weekly_stats(self, user_id: str) -> Dict[str, int]:
         """Get weekly statistics"""
-        today = datetime.utcnow().date()
+        today = datetime.now().date()
         week_ago = today - timedelta(days=6)
         
         cursor = self.mood_collection.find({
@@ -128,7 +128,7 @@ class AnalyticsService:
     
     async def get_monthly_stats(self, user_id: str) -> Dict[str, int]:
         """Get monthly statistics"""
-        today = datetime.utcnow().date()
+        today = datetime.now().date()
         month_ago = today - timedelta(days=29)
         
         cursor = self.mood_collection.find({

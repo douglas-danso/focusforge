@@ -79,7 +79,7 @@ class UserService:
                 update_data["hashed_password"] = self._hash_password(update_data["password"])
                 del update_data["password"]
             
-            update_data["updated_at"] = datetime.utcnow()
+            update_data["updated_at"] = datetime.now()
             
             result = await self.collection.find_one_and_update(
                 {"_id": ObjectId(user_id)},
