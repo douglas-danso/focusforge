@@ -8,6 +8,13 @@ try:
 except ImportError:
     mcp_available = False
 
+# Import orchestrator router
+try:
+    from app.api.v1.endpoints import orchestrator
+    orchestrator_available = True
+except ImportError:
+    orchestrator_available = False
+
 api_router = APIRouter()
 
 api_router.include_router(users.router, prefix="/users", tags=["users"])
@@ -22,3 +29,7 @@ api_router.include_router(store.router, prefix="/store", tags=["store"])
 # Include MCP router if available
 if mcp_available:
     api_router.include_router(mcp.router, prefix="/mcp", tags=["mcp"])
+
+# Include orchestrator router if available  
+if orchestrator_available:
+    api_router.include_router(orchestrator.router, prefix="/orchestrator", tags=["memory-chain-planner"])

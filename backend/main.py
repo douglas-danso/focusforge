@@ -1,111 +1,184 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from datetime import datetime
 from app.api.v1.router import api_router
 from app.core.config import settings
 from app.core.database import connect_to_mongo, close_mongo_connection
-import uvicorn
+from app.core.unified_mcp import unified_mcp
+from app.core.orchestrator import mcp_orchestrator
+from app.core.memory import memory_manager
+from app.core.background_tasks import task_scheduler
 import logging
 
-# Import MCP components
-try:
-    from app.mcp.server import MCPServer
-    from app.services.llm_service import LLMService
-    MCP_AVAILABLE = True
-except ImportError:
-    MCP_AVAILABLE = False
-    logging.warning("MCP components not available")
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
-    title="FocusForge API",
-    description="Productivity and focus management API with MCP integration",
-    version="1.0.0",
+    title="FocusForge API - Memory-Chain-Planner Architecture",
+    description="Productivity and focus management API with complete Memory-Chain-Planner architecture using MCP",
+    version="3.0.0",
     openapi_url=f"{settings.API_V1_STR}/openapi.json"
 )
 
-# Global MCP server instance (optional)
-mcp_server = None
-
 @app.on_event("startup")
 async def startup_event():
-    """Connect to MongoDB and initialize MCP on startup"""
-    global mcp_server
+    """Initialize the complete Memory-Chain-Planner architecture on startup"""
+    
+    logging.info("Starting FocusForge with Memory-Chain-Planner architecture...")
     
     # Connect to MongoDB
     await connect_to_mongo()
+    logging.info("MongoDB connection established")
     
-    # Initialize MCP integration (optional)
-    if MCP_AVAILABLE:
-        try:
-            # Enable MCP in LLM service with mock mode for now
-            llm_service = LLMService(use_mcp=True)
-            
-            logging.info("MCP integration enabled (mock mode)")
-        except Exception as e:
-            logging.warning(f"Failed to initialize MCP: {e}")
-    else:
-        logging.info("MCP library not available, using fallback mode")
+    # Initialize Memory-Chain-Planner Orchestrator (which initializes everything)
+    try:
+        await mcp_orchestrator.initialize()
+        logging.info("Memory-Chain-Planner orchestrator initialized successfully")
+    except Exception as e:
+        logging.error(f"Failed to initialize orchestrator: {e}")
+    
+    # Set up background task scheduler (if Redis available)
+    try:
+        if task_scheduler.task_manager.is_available():
+            task_scheduler.setup_recurring_tasks()
+            logging.info("Background task scheduler initialized")
+        else:
+            logging.warning("Background tasks running in fallback mode (Redis not available)")
+    except Exception as e:
+        logging.warning(f"Background task setup failed: {e}")
+    
+    logging.info("FocusForge backend fully initialized with Memory-Chain-Planner architecture")
 
 @app.on_event("shutdown")
 async def shutdown_event():
-    """Close MongoDB connection and MCP server on shutdown"""
-    global mcp_server
+    """Gracefully shutdown all components"""
+    
+    logging.info("Shutting down FocusForge backend...")
+    
+    # Shutdown orchestrator (which handles all components)
+    try:
+        await mcp_orchestrator.shutdown()
+        logging.info("Memory-Chain-Planner orchestrator shutdown complete")
+    except Exception as e:
+        logging.error(f"Orchestrator shutdown error: {e}")
     
     # Close MongoDB connection
     await close_mongo_connection()
+    logging.info("MongoDB connection closed")
     
-    # Stop MCP server if running
-    if mcp_server:
-        try:
-            await mcp_server.stop()
-            logging.info("MCP server stopped")
-        except Exception as e:
-            logging.warning(f"Error stopping MCP server: {e}")
+    logging.info("FocusForge backend shutdown complete")
 
 # Set all CORS enabled origins
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure properly for production
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# Include routers
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
 @app.get("/")
 async def root():
+    """Root endpoint with system information"""
     return {
-        "message": "FocusForge API is running",
-        "mcp_available": MCP_AVAILABLE,
-        "version": "1.0.0"
+        "message": "FocusForge API with Memory-Chain-Planner Architecture",
+        "version": "3.0.0",
+        "architecture": "Memory-Chain-Planner with Unified MCP",
+        "components": [
+            "Memory Layer (MongoDB + Vector Store)",
+            "Chain Layer (LangChain Chains)",
+            "Planner Layer (Intelligent Action Planning)",
+            "MCP Adapter Layer (Unified Tool Interface)",
+            "Background Task System (RQ/Redis)"
+        ],
+        "features": [
+            "AI Task Decomposition",
+            "Intelligent Planning", 
+            "Persistent Memory",
+            "Background Processing",
+            "Mood Tracking & Analytics",
+            "Gamification System",
+            "Spotify Integration",
+            "Calendar Integration",
+            "Unified Tool Interface"
+        ],
+        "endpoints": {
+            "api": f"{settings.API_V1_STR}",
+            "docs": "/docs",
+            "health": "/health",
+            "mcp_tools": "/mcp/tools",
+            "orchestrator_status": "/orchestrator/status"
+        }
     }
 
 @app.get("/health")
 async def health_check():
-    health_status = {"status": "healthy", "database": "connected"}
-    
-    # Add MCP status if available
-    if MCP_AVAILABLE:
-        try:
-            llm_service = LLMService(use_mcp=True)
-            mcp_status = await llm_service.get_mcp_status()
-            health_status["mcp"] = mcp_status
-        except Exception as e:
-            health_status["mcp"] = {
-                "enabled": False, 
-                "connected": False, 
-                "error": str(e),
-                "mode": "error"
+    """Enhanced health check with complete Memory-Chain-Planner architecture status"""
+    try:
+        # Get comprehensive system status from orchestrator
+        system_status = await mcp_orchestrator.get_system_status()
+        
+        overall_health = (
+            system_status.get("orchestrator_initialized", False) and
+            system_status.get("mcp_system", {}).get("initialized", False)
+        )
+        
+        return {
+            "status": "healthy" if overall_health else "degraded",
+            "timestamp": datetime.now().isoformat(),
+            "architecture": "Memory-Chain-Planner with Unified MCP",
+            "version": "3.0.0",
+            "system_status": system_status,
+            "components": {
+                "orchestrator": "healthy" if system_status.get("orchestrator_initialized") else "unhealthy",
+                "memory_system": "healthy" if system_status.get("memory_system") else "degraded",
+                "mcp_system": "healthy" if system_status.get("mcp_system", {}).get("initialized") else "unhealthy",
+                "background_processing": "healthy" if system_status.get("background_processing") else "degraded",
+                "database": "healthy",  # Assuming healthy if we reach this point
+                "tools_available": system_status.get("mcp_system", {}).get("tools_count", 0),
+                "active_actions": system_status.get("active_actions", 0),
+                "background_tasks": system_status.get("background_tasks", 0)
             }
-    else:
-        health_status["mcp"] = {
-            "enabled": False,
-            "connected": False,
-            "mode": "library_unavailable",
-            "message": "MCP library not installed"
         }
-    
-    return health_status
+    except Exception as e:
+        return {
+            "status": "unhealthy",
+            "error": str(e),
+            "timestamp": datetime.now().isoformat(),
+            "architecture": "Memory-Chain-Planner with Unified MCP",
+            "version": "3.0.0"
+        }
+
+@app.get("/orchestrator/status")
+async def orchestrator_status():
+    """Get detailed orchestrator status"""
+    try:
+        status = await mcp_orchestrator.get_system_status()
+        return {
+            "success": True,
+            "status": status,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    try:
+        import uvicorn
+        uvicorn.run(
+            "main:app",
+            host="0.0.0.0",
+            port=8000,
+            reload=True,
+            log_level="info"
+        )
+    except ImportError:
+        print("uvicorn not available - run with: python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload")
