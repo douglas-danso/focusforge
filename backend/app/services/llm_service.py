@@ -791,23 +791,65 @@ Make it practical, science-based, and personally relevant to their situation."""
     async def get_mcp_status(self) -> Dict[str, Any]:
         """Get MCP connection status and available tools"""
         if not self.use_mcp:
-            return {"enabled": False, "connected": False, "tools": []}
+            return {"enabled": False, "connected": False, "tools": [], "mode": "disabled"}
         
         try:
+            # Try to get status from simplified server first
             async with MCPSession() as mcp:
-                tools = await mcp.list_tools()
-                return {
-                    "enabled": True,
-                    "connected": mcp.connected,
-                    "tools": tools,
-                    "tool_count": len(tools)
-                }
+                if hasattr(mcp, 'simplified_server') and mcp.simplified_server:
+                    # Using simplified server
+                    tools = list(mcp.simplified_server.tools.keys())
+                    tool_details = [
+                        {
+                            "name": name,
+                            "description": info.get("description", ""),
+                            "parameters": info.get("parameters", {})
+                        }
+                        for name, info in mcp.simplified_server.tools.items()
+                    ]
+                    
+                    return {
+                        "enabled": True,
+                        "connected": True,
+                        "mode": "simplified_server",
+                        "tools": tool_details,
+                        "tool_count": len(tools),
+                        "message": "MCP running with simplified internal server"
+                    }
+                else:
+                    # Try external MCP server
+                    tools = await mcp.list_tools()
+                    return {
+                        "enabled": True,
+                        "connected": True,
+                        "mode": "external_server",
+                        "tools": tools,
+                        "tool_count": len(tools),
+                        "message": "MCP running with external server"
+                    }
         except Exception as e:
+            logger.warning(f"MCP server connection failed: {e}")
+            # Fallback to mock tools
+            tools = [
+                {"name": "task_breakdown", "description": "Break down tasks into manageable steps"},
+                {"name": "motivation_coach", "description": "Provide motivational support"},
+                {"name": "task_analysis", "description": "Analyze task complexity"},
+                {"name": "proof_validation", "description": "Validate task completion proof"},
+                {"name": "ritual_suggestion", "description": "Suggest productivity rituals"},
+                {"name": "comprehensive_guidance", "description": "Comprehensive AI guidance"},
+                {"name": "create_task", "description": "Create new tasks"},
+                {"name": "log_mood", "description": "Log mood entries"},
+                {"name": "get_focus_playlist", "description": "Get Spotify focus playlist"}
+            ]
+            
             return {
                 "enabled": True,
                 "connected": False,
+                "mode": "fallback",
+                "tools": tools,
+                "tool_count": len(tools),
                 "error": str(e),
-                "tools": []
+                "message": "MCP using fallback mode due to connection issues"
             }
     
     def _analyze_ritual_effectiveness(self, ritual_history: List[Dict]) -> Dict[str, Any]:

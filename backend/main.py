@@ -36,13 +36,14 @@ async def startup_event():
     # Initialize MCP integration (optional)
     if MCP_AVAILABLE:
         try:
-            # Enable MCP in LLM service
-            llm_service = LLMService()
-            llm_service.toggle_mcp(True)
+            # Enable MCP in LLM service with mock mode for now
+            llm_service = LLMService(use_mcp=True)
             
-            logging.info("MCP integration enabled")
+            logging.info("MCP integration enabled (mock mode)")
         except Exception as e:
             logging.warning(f"Failed to initialize MCP: {e}")
+    else:
+        logging.info("MCP library not available, using fallback mode")
 
 @app.on_event("shutdown")
 async def shutdown_event():
@@ -86,11 +87,23 @@ async def health_check():
     # Add MCP status if available
     if MCP_AVAILABLE:
         try:
-            llm_service = LLMService()
+            llm_service = LLMService(use_mcp=True)
             mcp_status = await llm_service.get_mcp_status()
             health_status["mcp"] = mcp_status
         except Exception as e:
-            health_status["mcp"] = {"status": "error", "message": str(e)}
+            health_status["mcp"] = {
+                "enabled": False, 
+                "connected": False, 
+                "error": str(e),
+                "mode": "error"
+            }
+    else:
+        health_status["mcp"] = {
+            "enabled": False,
+            "connected": False,
+            "mode": "library_unavailable",
+            "message": "MCP library not installed"
+        }
     
     return health_status
 

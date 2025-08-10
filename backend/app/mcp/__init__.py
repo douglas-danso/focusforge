@@ -20,7 +20,8 @@ __author__ = "FocusForge Team"
 
 # Import main components for easy access
 try:
-    from .server import MCPServer
+    # Try simplified server first
+    from .simplified_server import MCPServer
     from .client import MCPSession, get_mcp_client
     from .config import get_mcp_config
     
@@ -32,7 +33,21 @@ try:
     ]
     
 except ImportError as e:
-    # Graceful handling if dependencies aren't available
-    import logging
-    logging.getLogger(__name__).warning(f"Some MCP components unavailable: {e}")
-    __all__ = []
+    try:
+        # Fallback to original server
+        from .server import MCPServer
+        from .client import MCPSession, get_mcp_client
+        from .config import get_mcp_config
+        
+        __all__ = [
+            "MCPServer",
+            "MCPSession", 
+            "get_mcp_client",
+            "get_mcp_config"
+        ]
+        
+    except ImportError as e:
+        # Graceful handling if dependencies aren't available
+        import logging
+        logging.getLogger(__name__).warning(f"Some MCP components unavailable: {e}")
+        __all__ = []

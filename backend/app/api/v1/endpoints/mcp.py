@@ -30,6 +30,7 @@ async def list_mcp_tools():
         async with MCPSession() as mcp:
             tools = await mcp.list_tools()
             config = get_mcp_config()
+        
             
             # Organize tools by category
             categorized_tools = {}

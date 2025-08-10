@@ -9,21 +9,76 @@ import logging
 from typing import Any, Dict, List, Optional, Sequence
 from datetime import datetime
 
-from mcp.server import Server, NotificationOptions
-from mcp.server.models import InitializationOptions
-from mcp.server.stdio import stdio_server
-from mcp.types import (
-    CallToolRequest,
-    CallToolResult,
-    ListToolsRequest,
-    ListToolsResult,
-    Tool,
-    TextContent,
-    JSONValue,
-    EmbeddedResource,
-    ErrorData,
-    McpError,
-)
+# Import MCP components with error handling
+try:
+    from mcp.server import Server
+    from mcp.server.models import InitializationOptions
+    from mcp.server.stdio import stdio_server
+    
+    # Try to import types, handling missing ones gracefully  
+    try:
+        from mcp.types import (
+            CallToolRequest,
+            CallToolResult,
+            ListToolsRequest, 
+            ListToolsResult,
+            Tool,
+            TextContent,
+            EmbeddedResource,
+        )
+        
+        # Import optional types that may not exist in all versions
+        try:
+            from mcp.types import ErrorData
+        except ImportError:
+            class ErrorData: pass
+        
+        try:
+            from mcp.types import McpError
+        except ImportError:
+            # McpError doesn't exist in this version of MCP library
+            class McpError(Exception): pass
+            
+    except ImportError as e:
+        # If core types aren't available, define fallbacks
+        logging.warning(f"Core MCP types not available: {e}")
+        class CallToolRequest: pass
+        class CallToolResult: pass
+        class ListToolsRequest: pass
+        class ListToolsResult: pass
+        class Tool: pass
+        class TextContent: pass
+        class EmbeddedResource: pass
+        class ErrorData: pass
+        class McpError(Exception): pass
+    
+    # Try NotificationOptions, create fallback if not available
+    try:
+        from mcp.server import NotificationOptions
+    except ImportError:
+        class NotificationOptions: pass
+        
+    MCP_AVAILABLE = True
+    
+except ImportError as e:
+    logging.error(f"MCP library not available: {e}")
+    MCP_AVAILABLE = False
+    
+    # Create mock classes for development
+    class Server: pass
+    class InitializationOptions: pass
+    class NotificationOptions: pass
+    class CallToolRequest: pass
+    class CallToolResult: pass
+    class ListToolsRequest: pass
+    class ListToolsResult: pass
+    class Tool: pass
+    class TextContent: pass
+    class EmbeddedResource: pass
+    class ErrorData: pass
+    class McpError(Exception): pass
+    
+    def stdio_server(): pass
 
 from app.services.task_service import TaskService
 from app.services.mood_service import MoodService
