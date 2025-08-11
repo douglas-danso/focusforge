@@ -10,9 +10,10 @@ from typing import Any, Dict, List, Optional, Union
 from datetime import datetime, timedelta
 from abc import ABC, abstractmethod
 
-from langchain.memory import BaseChatMemory, ConversationBufferMemory
+from langchain.chains.conversation.memory import ConversationBufferMemory
 from langchain.schema import BaseMessage, HumanMessage, AIMessage
-from langchain.memory.utils import get_buffer_string
+from langchain_core.messages.utils import get_buffer_string
+
 
 from app.core.database import get_database
 from app.core.config import settings
@@ -177,7 +178,7 @@ class MemoryStore:
                     await collection.delete_many({"_id": {"$in": ids_to_delete}})
 
 
-class PersistentConversationMemory(BaseChatMemory):
+class PersistentConversationMemory(ConversationBufferMemory):
     """
     LangChain-compatible conversation memory with MongoDB persistence
     """

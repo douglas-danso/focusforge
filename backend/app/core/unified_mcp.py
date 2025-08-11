@@ -71,7 +71,7 @@ class UnifiedMCPSystem:
                 "store": StoreService(self.db),
                 "spotify": SpotifyService(),
                 "analytics": AnalyticsService(self.db),
-                "llm": LLMService(use_mcp=True)
+                "llm": LLMService()
             }
             
             self.is_initialized = True

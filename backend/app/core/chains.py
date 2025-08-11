@@ -10,7 +10,7 @@ from typing import Any, Dict, List, Optional, Union
 from datetime import datetime
 
 from langchain.chains.base import Chain
-from langchain.chains import LLMChain, SequentialChain
+from langchain.chains import SequentialChain
 from langchain.prompts import PromptTemplate, ChatPromptTemplate
 from langchain.schema import BaseOutputParser
 from langchain.llms.base import BaseLLM
@@ -199,13 +199,14 @@ class TaskBreakdownChain(BaseTaskChain):
         }
         
         # Create and run chain
-        chain = LLMChain(llm=self.llm, prompt=prompt)
+        chain = prompt | self.llm
         
         try:
-            result = await chain.arun(**formatted_inputs)
+            result = await chain.ainvoke(formatted_inputs)
             
-            # Parse JSON response
-            parsed_result = json.loads(result)
+            # Parse JSON response from the chain output
+            chain_output = result.content if hasattr(result, 'content') else str(result)
+            parsed_result = json.loads(chain_output)
             
             # Store result in memory
             await self._store_chain_result("task_breakdown", inputs, parsed_result)
@@ -296,6 +297,14 @@ class TaskAnalysisChain(BaseTaskChain):
     def input_keys(self) -> List[str]:
         return ["title", "description", "duration_minutes", "skill_level"]
     
+    def _call(
+        self,
+        inputs: Dict[str, Any],
+        run_manager: Optional[CallbackManagerForChainRun] = None,
+    ) -> Dict[str, Any]:
+        """Execute the task analysis chain (sync wrapper)"""
+        return asyncio.run(self._acall(inputs, run_manager))
+    
     async def _acall(self, inputs: Dict[str, Any], run_manager = None) -> Dict[str, Any]:
         """Async execution of task analysis"""
         
@@ -311,11 +320,13 @@ class TaskAnalysisChain(BaseTaskChain):
             "user_context": json.dumps(user_context, indent=2)
         }
         
-        chain = LLMChain(llm=self.llm, prompt=prompt)
+        # Use the new RunnableSequence pattern instead of deprecated LLMChain
+        chain = prompt | self.llm
         
         try:
-            result = await chain.arun(**formatted_inputs)
-            parsed_result = json.loads(result)
+            result = await chain.ainvoke(formatted_inputs)
+            chain_output = result.content if hasattr(result, 'content') else str(result)
+            parsed_result = json.loads(chain_output)
             
             await self._store_chain_result("task_analysis", inputs, parsed_result)
             
@@ -383,6 +394,14 @@ class MotivationChain(BaseTaskChain):
     def input_keys(self) -> List[str]:
         return ["mood", "challenge", "accomplishments"]
     
+    def _call(
+        self,
+        inputs: Dict[str, Any],
+        run_manager: Optional[CallbackManagerForChainRun] = None,
+    ) -> Dict[str, Any]:
+        """Execute the motivation chain (sync wrapper)"""
+        return asyncio.run(self._acall(inputs, run_manager))
+    
     async def _acall(self, inputs: Dict[str, Any], run_manager = None) -> Dict[str, Any]:
         """Generate personalized motivation"""
         
@@ -399,11 +418,12 @@ class MotivationChain(BaseTaskChain):
             "accomplishments": json.dumps(inputs.get("accomplishments", []))
         }
         
-        chain = LLMChain(llm=self.llm, prompt=prompt)
+        chain = prompt | self.llm
         
         try:
-            result = await chain.arun(**formatted_inputs)
-            parsed_result = json.loads(result)
+            result = await chain.ainvoke(formatted_inputs)
+            chain_output = result.content if hasattr(result, 'content') else str(result)
+            parsed_result = json.loads(chain_output)
             
             await self._store_chain_result("motivation", inputs, parsed_result)
             
@@ -459,6 +479,14 @@ class ProofValidationChain(BaseTaskChain):
     def input_keys(self) -> List[str]:
         return ["task_description", "completion_criteria", "proof_text"]
     
+    def _call(
+        self,
+        inputs: Dict[str, Any],
+        run_manager: Optional[CallbackManagerForChainRun] = None,
+    ) -> Dict[str, Any]:
+        """Execute the proof validation chain (sync wrapper)"""
+        return asyncio.run(self._acall(inputs, run_manager))
+    
     async def _acall(self, inputs: Dict[str, Any], run_manager = None) -> Dict[str, Any]:
         """Validate task completion proof"""
         
@@ -467,11 +495,12 @@ class ProofValidationChain(BaseTaskChain):
             input_variables=["task_description", "completion_criteria", "proof_text"]
         )
         
-        chain = LLMChain(llm=self.llm, prompt=prompt)
+        chain = prompt | self.llm
         
         try:
-            result = await chain.arun(**inputs)
-            parsed_result = json.loads(result)
+            result = await chain.ainvoke(inputs)
+            chain_output = result.content if hasattr(result, 'content') else str(result)
+            parsed_result = json.loads(chain_output)
             
             await self._store_chain_result("proof_validation", inputs, parsed_result)
             

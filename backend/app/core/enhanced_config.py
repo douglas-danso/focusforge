@@ -5,24 +5,32 @@ Extends existing config with AI, MCP, and orchestrator settings
 
 import os
 from typing import Dict, List, Any, Optional
-from pydantic import BaseSettings, Field
+from pydantic import Field
+from pydantic_settings import BaseSettings
 
 class EnhancedSettings(BaseSettings):
     """Enhanced settings for FocusForge with Memory-Chain-Planner architecture"""
     
     # Existing core settings (inherit from app.core.config if available)
     API_V1_STR: str = "/api/v1"
-    PROJECT_NAME: str = "FocusForge Enhanced"
+    PROJECT_NAME: str = "FocusForge"
     VERSION: str = "2.0.0"
     
     # Database settings
-    MONGODB_URI: str = "mongodb://localhost:27017"
-    DATABASE_NAME: str = "focusforge_enhanced"
+    MONGODB_URI: str = os.getenv("MONGODB_URI", "mongodb://mongo:27017")
+    DATABASE_NAME: str = os.getenv("DATABASE_NAME", "focusforge")
     
+    # Redis settings
+    REDIS_URL: str = os.getenv("REDIS_URL", "redis://redis:6379")
+
+    SPOTIPY_CLIENT_ID: str = os.getenv("SPOTIPY_CLIENT_ID", "")
+    SPOTIPY_CLIENT_SECRET: str = os.getenv("SPOTIPY_CLIENT_SECRET", "")
+    SPOTIPY_REDIRECT_URI: str = os.getenv("SPOTIPY_REDIRECT_URI", "http://localhost:3000/callback")
+
     # AI/LLM settings
-    OPENAI_API_KEY: str = ""
-    OPENAI_MODEL: str = "gpt-4"
-    TEMPERATURE: float = 0.3
+    OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
+    OPENAI_MODEL: str = os.getenv("OPENAI_MODEL", "gpt-4")
+    TEMPERATURE: float = os.getenv("TEMPERATURE", 0.3)
     MAX_TOKENS: int = 2000
     LLM_TIMEOUT_SECONDS: int = 30
     
@@ -279,7 +287,7 @@ PERFORMANCE_THRESHOLDS = {
 }
 
 # Create settings instance
-enhanced_settings = EnhancedSettings()
+settings = EnhancedSettings()
 
 # Utility functions
 def get_agent_config(agent_name: str) -> Dict[str, Any]:
@@ -321,26 +329,26 @@ def apply_environment_overrides():
     env = os.getenv("ENVIRONMENT", "development").lower()
     
     if env == "production":
-        enhanced_settings.DEBUG = False
-        enhanced_settings.LOG_LEVEL = "WARNING"
-        enhanced_settings.MOCK_EXTERNAL_SERVICES = False
-        enhanced_settings.PERFORMANCE_MONITORING_ENABLED = True
-        
+        settings.DEBUG = False
+        settings.LOG_LEVEL = "WARNING"
+        settings.MOCK_EXTERNAL_SERVICES = False
+        settings.PERFORMANCE_MONITORING_ENABLED = True
+
     elif env == "testing":
-        enhanced_settings.TESTING = True
-        enhanced_settings.MOCK_EXTERNAL_SERVICES = True
-        enhanced_settings.MCP_ENABLED = False  # Use mocks in testing
-        enhanced_settings.BACKGROUND_TASK_ENABLED = False
-        
+        settings.TESTING = True
+        settings.MOCK_EXTERNAL_SERVICES = True
+        settings.MCP_ENABLED = False  # Use mocks in testing
+        settings.BACKGROUND_TASK_ENABLED = True
+
     elif env == "development":
-        enhanced_settings.DEBUG = True
-        enhanced_settings.LOG_LEVEL = "DEBUG"
-        enhanced_settings.MOCK_EXTERNAL_SERVICES = True
+        settings.DEBUG = True
+        settings.LOG_LEVEL = "DEBUG"
+        settings.MOCK_EXTERNAL_SERVICES = True
 
 # Apply overrides when module is imported
 apply_environment_overrides()
 
 # Export main settings object
-__all__ = ['enhanced_settings', 'get_agent_config', 'get_mcp_adapter_config', 
+__all__ = ['settings', 'get_agent_config', 'get_mcp_adapter_config', 
           'get_memory_config', 'is_feature_enabled', 'get_action_priority_config',
           'validate_performance_threshold']

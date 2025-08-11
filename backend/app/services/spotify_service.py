@@ -25,8 +25,6 @@ class SpotifyService:
             return
             
         try:
-            # Use Client Credentials flow for basic operations (no user auth required)
-            # This is perfect for Docker/server environments
             auth_manager = SpotifyClientCredentials(
                 client_id=settings.SPOTIPY_CLIENT_ID,
                 client_secret=settings.SPOTIPY_CLIENT_SECRET
@@ -66,7 +64,7 @@ class SpotifyService:
                     redirect_uri=redirect_uri,
                     scope=scope,
                     cache_path=cache_path,
-                    open_browser=False  # Never open browser in Docker
+                    open_browser=False
                 )
                 
                 # Check if we have a valid cached token

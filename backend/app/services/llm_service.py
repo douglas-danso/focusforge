@@ -19,6 +19,61 @@ class LLMService:
     
     # ===== CORE LLM METHODS =====
     
+    async def decompose_task(self, task_description: str, duration_minutes: int, 
+                           user_context: Optional[Dict] = None) -> List[Dict[str, Any]]:
+        """Decompose a task into manageable subtasks (simple version)"""
+        try:
+            # Use unified MCP system for task breakdown
+            from app.core.unified_mcp import unified_mcp
+            
+            # Parse task description
+            title = task_description.split(":")[0] if ":" in task_description else task_description
+            description = task_description.split(":", 1)[1] if ":" in task_description else ""
+            
+            result = await unified_mcp.call_tool(
+                "task_breakdown",
+                {
+                    "title": title,
+                    "description": description,
+                    "duration_minutes": duration_minutes,
+                    "user_context": user_context or {}
+                }
+            )
+            
+            if result.get("success"):
+                return result.get("breakdown", [])
+            else:
+                logger.warning(f"Task breakdown failed: {result.get('error')}")
+                # Return fallback breakdown
+                return self._create_fallback_breakdown(title, duration_minutes)
+                
+        except Exception as e:
+            logger.error(f"Error in task decomposition: {e}")
+            return self._create_fallback_breakdown(task_description, duration_minutes)
+    
+    def _create_fallback_breakdown(self, task_title: str, duration_minutes: int) -> List[Dict[str, Any]]:
+        """Create a simple fallback breakdown when AI fails"""
+        return [
+            {
+                "title": f"Plan: {task_title}",
+                "description": "Analyze requirements and create approach",
+                "estimated_minutes": max(5, duration_minutes // 4),
+                "type": "planning"
+            },
+            {
+                "title": f"Execute: {task_title}",
+                "description": "Complete the main task work",
+                "estimated_minutes": max(10, duration_minutes * 3 // 4),
+                "type": "execution"
+            },
+            {
+                "title": f"Review: {task_title}",
+                "description": "Review and finalize the completed work",
+                "estimated_minutes": max(5, duration_minutes // 6),
+                "type": "review"
+            }
+        ]
+    
     async def decompose_task_detailed(self, task_description: str, duration_minutes: int, 
                                     user_context: Optional[Dict] = None) -> List[Dict[str, Any]]:
         """Decompose a task into manageable subtasks with detailed context"""
@@ -27,7 +82,7 @@ class LLMService:
             from app.core.unified_mcp import unified_mcp
             
             result = await unified_mcp.call_tool(
-                "ai_task_breakdown",
+                "task_breakdown",
                 {
                     "title": task_description.split(":")[0],
                     "description": task_description.split(":", 1)[1] if ":" in task_description else "",
@@ -152,6 +207,66 @@ class LLMService:
             logger.error(f"Error suggesting ritual: {e}")
             return {}
     
+    async def suggest_productivity_ritual(self, user_mood: str, task_type: str, 
+                                        time_of_day: str = "morning", 
+                                        preferences: Dict = None) -> Dict[str, Any]:
+        """Suggest productivity ritual with Spotify integration"""
+        try:
+            # For now, return a structured fallback ritual
+            # TODO: Implement LLM call when OpenAI client is properly configured
+            return {
+                "success": True,
+                "result": self._get_fallback_ritual(user_mood, task_type)
+            }
+            
+        except Exception as e:
+            logger.error(f"Error generating productivity ritual: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "result": self._get_fallback_ritual(user_mood, task_type)
+            }
+    
+    def _get_fallback_ritual(self, user_mood: str, task_type: str) -> Dict[str, Any]:
+        """Generate a fallback ritual when AI fails"""
+        playlist_map = {
+            "coding": "37i9dQZF1DX0XUsuxWHRQd",  # Deep Focus
+            "programming": "37i9dQZF1DX0XUsuxWHRQd",
+            "creative": "37i9dQZF1DX4sWSpwAYIy1",  # Creative Flow
+            "studying": "37i9dQZF1DX6VDO8a6cQME",  # Study Focus
+            "writing": "37i9dQZF1DX3PFzdbtx1Us",  # Writing Focus
+            "general": "37i9dQZF1DWZeKCadgRdKQ"   # Focus Flow
+        }
+        
+        playlist_id = playlist_map.get(task_type.lower(), playlist_map["general"])
+        
+        return {
+            "ritual_steps": [
+                "Clear and organize your workspace",
+                "Take 3 deep breaths to center yourself",
+                "Set a clear intention for this session",
+                "Start your focus music",
+                "Begin working with full attention"
+            ],
+            "spotify_playlist_id": playlist_id,
+            "estimated_duration_minutes": 3,
+            "focus_tips": [
+                "Remove all distractions from your workspace",
+                "Keep water nearby to stay hydrated",
+                "Use the Pomodoro technique for sustained focus"
+            ],
+            "environment_setup": {
+                "lighting": "bright and natural",
+                "temperature": "comfortable and cool",
+                "distractions": "eliminated"
+            },
+            "breathing_exercise": {
+                "technique": "Box breathing (4-4-4-4)",
+                "duration_seconds": 60
+            },
+            "motivation": f"Ready to tackle this {task_type} session! You have everything you need to succeed."
+        }
+    
     async def get_comprehensive_task_guidance(self, task_data: Dict[str, Any], 
                                             user_context: Dict[str, Any]) -> Dict[str, Any]:
         """Get comprehensive AI guidance for task execution"""
@@ -159,7 +274,7 @@ class LLMService:
             from app.core.unified_mcp import unified_mcp
             
             result = await unified_mcp.call_tool(
-                "ai_comprehensive_guidance",
+                "task_analysis",
                 {
                     "task_data": task_data,
                     "user_context": user_context

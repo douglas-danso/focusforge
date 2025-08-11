@@ -3,7 +3,7 @@ Memory-Chain-Planner API endpoints
 Enhanced endpoints that use the complete orchestrator architecture
 """
 
-from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
+from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks, Query, Path
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 
@@ -13,84 +13,119 @@ from app.core.chains import chain_executor
 from app.core.memory import memory_manager
 from app.core.background_tasks import task_scheduler
 from app.core.database import get_database
+from app.models.api_schemas import (
+    TaskCreationRequest, TaskCreationResponse,
+    TaskCompletionRequest, TaskCompletionResponse,
+    DailyOptimizationRequest, DailyOptimizationResponse,
+    FocusSessionRequest, FocusSessionResponse,
+    UserActionsResponse, ExecuteActionsResponse,
+    ChainExecutionRequest, ChainExecutionResponse,
+    ChainSequenceRequest, ChainSequenceResponse,
+    UserContextResponse, UserContextUpdateRequest,
+    TaskInsightsResponse, SimilarTasksResponse,
+    BackgroundTaskStatusResponse, OrchestratorStatusResponse,
+    QueueEventRequest, QueueEventResponse,
+    ProcessingMode, create_error_response, validate_user_id
+)
 
 router = APIRouter()
 
 
 # ===== ORCHESTRATOR ENDPOINTS =====
 
-@router.post("/tasks/create-enhanced", response_model=Dict[str, Any])
+@router.post("/tasks/create-enhanced", response_model=TaskCreationResponse)
 async def create_task_enhanced(
-    task_data: Dict[str, Any],
-    user_id: str = "default",  # TODO: Get from auth
+    request: TaskCreationRequest,
+    user_id: str = Query(..., description="User ID"),
     background_tasks: BackgroundTasks = None,
-    use_background: bool = True
-):
+    use_background: bool = Query(True, description="Use background processing")
+) -> TaskCreationResponse:
     """
     Create task using complete Memory-Chain-Planner workflow
     Can run in foreground or background
     """
     try:
+        # Validate user ID
+        user_id = validate_user_id(user_id)
+        
+        # Convert request to dict for orchestrator
+        task_data = request.dict()
+        
         if use_background and task_scheduler.task_manager.is_available():
             # Schedule background processing
             job_id = task_scheduler.schedule_task_creation(user_id, task_data)
             
-            return {
-                "success": True,
-                "message": "Task creation workflow scheduled",
-                "job_id": job_id,
-                "processing": "background",
-                "user_id": user_id
-            }
+            return TaskCreationResponse(
+                success=True,
+                processing=ProcessingMode.BACKGROUND,
+                user_id=user_id,
+                job_id=job_id
+            )
         else:
             # Process immediately
             result = await mcp_orchestrator.handle_task_creation(user_id, task_data)
             
-            return {
-                "success": True,
-                "message": "Task created successfully",
-                "result": result,
-                "processing": "immediate",
-                "user_id": user_id
-            }
+            return TaskCreationResponse(
+                success=True,
+                processing=ProcessingMode.IMMEDIATE,
+                user_id=user_id,
+                task=result.get("task"),
+                analysis=result.get("analysis"),
+                breakdown=result.get("breakdown"),
+                planned_actions=result.get("planned_actions", 0),
+                user_context_enhanced=result.get("user_context_enhanced", False),
+                similar_tasks_found=result.get("similar_tasks_found", 0)
+            )
             
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/tasks/complete-enhanced", response_model=Dict[str, Any])
+@router.post("/tasks/complete-enhanced", response_model=TaskCompletionResponse)
 async def complete_task_enhanced(
-    completion_data: Dict[str, Any],
-    user_id: str = "default",  # TODO: Get from auth
-    use_background: bool = True
-):
+    request: TaskCompletionRequest,
+    user_id: str = Query(..., description="User ID"),
+    use_background: bool = Query(True, description="Use background processing")
+) -> TaskCompletionResponse:
     """
     Complete task using Memory-Chain-Planner workflow
     """
     try:
+        # Validate user ID
+        user_id = validate_user_id(user_id)
+        
+        # Convert request to dict for orchestrator
+        completion_data = request.dict()
+        
         if use_background and task_scheduler.task_manager.is_available():
             # Schedule background processing
             job_id = task_scheduler.schedule_task_completion(user_id, completion_data)
             
-            return {
-                "success": True,
-                "message": "Task completion workflow scheduled",
-                "job_id": job_id,
-                "processing": "background",
-                "user_id": user_id
-            }
+            return TaskCompletionResponse(
+                success=True,
+                processing=ProcessingMode.BACKGROUND,
+                user_id=user_id,
+                job_id=job_id
+            )
         else:
             # Process immediately
             result = await mcp_orchestrator.handle_task_completion(user_id, completion_data)
             
-            return {
-                "success": True,
-                "message": "Task completed successfully",
-                "result": result,
-                "processing": "immediate",
-                "user_id": user_id
-            }
+            return TaskCompletionResponse(
+                success=True,
+                processing=ProcessingMode.IMMEDIATE,
+                user_id=user_id,
+                validation=result.get("validation"),
+                motivation=result.get("motivation"),
+                points_awarded=result.get("points_awarded", 0),
+                planned_actions=result.get("planned_actions", 0),
+                completion_recorded=result.get("completion_recorded", False)
+            )
             
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -132,37 +167,51 @@ async def daily_optimization(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/focus-session", response_model=Dict[str, Any])
+@router.post("/focus-session", response_model=FocusSessionResponse)
 async def start_focus_session(
-    session_data: Dict[str, Any],
-    user_id: str = "default"  # TODO: Get from auth
-):
+    request: FocusSessionRequest,
+    user_id: str = Query(..., description="User ID")
+) -> FocusSessionResponse:
     """
     Start focus session with ritual recommendations
     """
     try:
+        # Validate user ID
+        user_id = validate_user_id(user_id)
+        
+        # Convert request to dict for orchestrator
+        session_data = request.dict()
+        
         result = await mcp_orchestrator.handle_focus_session(user_id, session_data)
         
-        return {
-            "success": True,
-            "message": "Focus session started",
-            "result": result,
-            "user_id": user_id
-        }
+        return FocusSessionResponse(
+            success=True,
+            user_id=user_id,
+            session_started=result.get("session_started", False),
+            ritual_suggestion=result.get("ritual_suggestion"),
+            playlist_started=result.get("playlist_started", False),
+            task_analysis=result.get("task_analysis"),
+            session_context=result.get("session_context")
+        )
         
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
 # ===== PLANNER ENDPOINTS =====
 
-@router.get("/planner/actions/{user_id}", response_model=Dict[str, Any])
+@router.get("/planner/actions/{user_id}", response_model=UserActionsResponse)
 async def get_user_actions(
-    user_id: str,
-    status: Optional[str] = None
-):
+    user_id: str = Path(..., description="User ID"),
+    status: Optional[str] = Query(None, description="Filter by action status")
+) -> UserActionsResponse:
     """Get all planned actions for a user"""
     try:
+        # Validate user ID
+        user_id = validate_user_id(user_id)
+        
         from app.core.planner import ActionStatus
         
         status_filter = None
@@ -174,42 +223,40 @@ async def get_user_actions(
         
         actions = action_planner.get_user_actions(user_id, status_filter)
         
-        # Convert to serializable format
+        # Convert to response format using the ActionResponse schema
+        from app.models.api_schemas import ActionResponse
         serialized_actions = []
         for action in actions:
-            action_dict = {
-                "action_id": action.action_id,
-                "action_type": action.action_type.value,
-                "priority": action.priority.value,
-                "status": action.status.value,
-                "user_id": action.user_id,
-                "parameters": action.parameters,
-                "dependencies": action.dependencies,
-                "created_at": action.created_at.isoformat(),
-                "updated_at": action.updated_at.isoformat(),
-                "attempts": action.attempts,
-                "max_attempts": action.max_attempts
-            }
-            
-            if action.scheduled_at:
-                action_dict["scheduled_at"] = action.scheduled_at.isoformat()
-            if action.result:
-                action_dict["result"] = action.result
-            if action.error:
-                action_dict["error"] = action.error
-            if action.execution_time_ms:
-                action_dict["execution_time_ms"] = action.execution_time_ms
-            
-            serialized_actions.append(action_dict)
+            action_response = ActionResponse(
+                success=True,
+                action_id=action.action_id,
+                action_type=action.action_type.value,
+                priority=action.priority.value,
+                status=action.status.value,
+                user_id=action.user_id,
+                parameters=action.parameters,
+                dependencies=action.dependencies,
+                created_at=action.created_at,
+                updated_at=action.updated_at,
+                scheduled_at=action.scheduled_at,
+                attempts=action.attempts,
+                max_attempts=action.max_attempts,
+                result=action.result,
+                error=action.error,
+                execution_time_ms=action.execution_time_ms
+            )
+            serialized_actions.append(action_response)
         
-        return {
-            "success": True,
-            "user_id": user_id,
-            "actions": serialized_actions,
-            "count": len(serialized_actions),
-            "status_filter": status
-        }
+        return UserActionsResponse(
+            success=True,
+            user_id=user_id,
+            actions=serialized_actions,
+            count=len(serialized_actions),
+            status_filter=status
+        )
         
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -514,17 +561,17 @@ async def schedule_action_execution(
 
 # ===== ORCHESTRATOR STATUS =====
 
-@router.get("/orchestrator/status", response_model=Dict[str, Any])
-async def get_orchestrator_status():
+@router.get("/orchestrator/status", response_model=OrchestratorStatusResponse)
+async def get_orchestrator_status() -> OrchestratorStatusResponse:
     """Get detailed orchestrator status"""
     try:
         status = await mcp_orchestrator.get_system_status()
         
-        return {
-            "success": True,
-            "status": status,
-            "timestamp": datetime.now().isoformat()
-        }
+        return OrchestratorStatusResponse(
+            success=True,
+            status=status,
+            timestamp=datetime.now()
+        )
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

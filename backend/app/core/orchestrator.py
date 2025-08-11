@@ -134,19 +134,36 @@ class MCPOrchestrator:
             )
             
             # 5. MEMORY: Store the complete workflow result
+            # Convert mcp_result to serializable format
+            mcp_result_serializable = {
+                "success": mcp_result.get("success", False),
+                "tool": mcp_result.get("tool", ""),
+                "timestamp": mcp_result.get("timestamp", "")
+            }
+            
+            if "result" in mcp_result and mcp_result["result"]:
+                result = mcp_result["result"]
+                # Convert Task object to dict if present
+                if "task" in result and hasattr(result["task"], "dict"):
+                    result_copy = result.copy()
+                    result_copy["task"] = result["task"].dict()
+                    mcp_result_serializable["result"] = result_copy
+                else:
+                    mcp_result_serializable["result"] = result
+            
             workflow_result = {
                 "user_context": user_context,
                 "similar_tasks": similar_tasks,
                 "analysis": analysis_result.get("output", {}),
                 "breakdown": breakdown_result.get("output", {}),
                 "planned_actions": planned_actions,
-                "mcp_result": mcp_result,
+                "mcp_result": mcp_result_serializable,
                 "created_at": datetime.now().isoformat()
             }
             
             await memory_manager.store_task_insights(
                 user_id,
-                mcp_result.get("result", {}).get("id", "unknown"),
+                mcp_result_serializable.get("result", {}).get("task", {}).get("id", "unknown"),
                 workflow_result
             )
             

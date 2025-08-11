@@ -546,11 +546,33 @@ class ActionPlanner:
                 action.error = result.get("error", "Unknown error")
                 logger.error(f"Action {action.action_id} failed: {action.error}")
             
-            # Store result in memory for context
+            # Store result in memory for context (create serializable version)
+            action_serializable = asdict(action)
+            # Convert enum values to strings
+            action_serializable["action_type"] = action.action_type.value
+            action_serializable["priority"] = action.priority.value  
+            action_serializable["status"] = action.status.value
+            # Convert datetime objects to ISO strings
+            action_serializable["created_at"] = action.created_at.isoformat()
+            action_serializable["updated_at"] = action.updated_at.isoformat()
+            if action.scheduled_at:
+                action_serializable["scheduled_at"] = action.scheduled_at.isoformat()
+            
+            # Handle result field that might contain Task objects
+            if action.result and isinstance(action.result, dict):
+                result_copy = action.result.copy()
+                if "result" in result_copy and isinstance(result_copy["result"], dict):
+                    nested_result = result_copy["result"]
+                    if "task" in nested_result and hasattr(nested_result["task"], "dict"):
+                        nested_result_copy = nested_result.copy()
+                        nested_result_copy["task"] = nested_result["task"].dict()
+                        result_copy["result"] = nested_result_copy
+                action_serializable["result"] = result_copy
+            
             await memory_manager.memory_store.store_memory(
                 "working",
                 f"action_result:{action.action_id}",
-                asdict(action),
+                action_serializable,
                 action.user_id
             )
             
