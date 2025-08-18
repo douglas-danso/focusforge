@@ -19,6 +19,7 @@ from app.services.spotify_service import SpotifyService
 from app.services.analytics_service import AnalyticsService
 from app.services.llm_service import LLMService
 from app.core.database import get_database
+from app.core.memory import memory_manager
 
 logger = logging.getLogger(__name__)
 
@@ -127,6 +128,17 @@ class UnifiedMCPSystem:
                 handler=self._handle_task_analysis
             ),
             MCPTool(
+                name="ai_proof_validation",
+                description="Validate task completion proof using AI",
+                category=MCPToolCategory.AI_AGENTS,
+                parameters={
+                    "task_description": {"type": "string", "required": True},
+                    "proof_text": {"type": "string", "required": True},
+                    "completion_criteria": {"type": "string", "required": False}
+                },
+                handler=self._handle_ai_proof_validation
+            ),
+            MCPTool(
                 name="motivation_coach",
                 description="Get personalized motivational support",
                 category=MCPToolCategory.AI_AGENTS,
@@ -150,7 +162,7 @@ class UnifiedMCPSystem:
                 handler=self._handle_proof_validation
             ),
             MCPTool(
-                name="ritual_suggestion",
+                name="ai_ritual_suggestion",
                 description="Get personalized productivity ritual recommendations",
                 category=MCPToolCategory.AI_AGENTS,
                 parameters={
@@ -453,13 +465,25 @@ class UnifiedMCPSystem:
             "mood": params.get("current_mood", "neutral")
         }
     
+    async def _handle_ai_proof_validation(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Handle AI proof validation"""
+        llm_service = self.services["llm"]
+        
+        validation = await llm_service.validate_task_proof(
+            task_description=params["task_description"],
+            proof_text=params["proof_text"],
+            completion_criteria=params.get("completion_criteria", "")
+        )
+        
+        return validation
+    
     async def _handle_proof_validation(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """Handle proof validation AI agent"""
         llm_service = self.services["llm"]
         
-        validation = await llm_service.validate_task_completion(
+        validation = await llm_service.validate_task_proof(
             task_description=params["task_description"],
-            completion_proof=params["proof_text"],
+            proof_text=params["proof_text"],
             completion_criteria=params.get("completion_criteria", "")
         )
         
@@ -536,55 +560,115 @@ class UnifiedMCPSystem:
     
     async def _handle_start_task_block(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """Handle starting a task block"""
-        # Mock implementation - integrate with pomodoro service
-        return {
-            "status": "started",
-            "block_id": params["block_id"],
-            "start_time": datetime.now().isoformat(),
-            "user_id": params["user_id"]
-        }
+        try:
+            # Get the task service
+            task_service = self.services["task"]
+            
+            # Start the task block
+            result = await task_service.start_task_block(
+                block_id=params["block_id"],
+                user_id=params["user_id"]
+            )
+            
+            if result.get("success"):
+                return {
+                    "status": "started",
+                    "block_id": params["block_id"],
+                    "start_time": datetime.now().isoformat(),
+                    "user_id": params["user_id"],
+                    "suggested_break_after": result.get("suggested_break_after", 25),
+                    "estimated_tokens": result.get("estimated_tokens", 10)
+                }
+            else:
+                return {
+                    "status": "failed",
+                    "error": result.get("message", "Unknown error"),
+                    "block_id": params["block_id"],
+                    "user_id": params["user_id"]
+                }
+                
+        except Exception as e:
+            logger.error(f"Error starting task block: {e}")
+            return {
+                "status": "error",
+                "error": str(e),
+                "block_id": params["block_id"],
+                "user_id": params["user_id"]
+            }
     
     async def _handle_complete_task_block(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """Handle completing a task block"""
-        # Mock implementation - integrate with proof validation
-        proof_valid = True
-        if params.get("proof_data"):
-            # Validate proof using AI
-            validation = await self._handle_proof_validation({
-                "task_description": "Task block completion",
-                "proof_text": params["proof_data"].get("text", ""),
-                "completion_criteria": ""
-            })
-            proof_valid = validation.get("valid", False)
-        
-        return {
-            "status": "completed" if proof_valid else "needs_review",
-            "block_id": params["block_id"],
-            "completion_time": datetime.now().isoformat(),
-            "proof_valid": proof_valid,
-            "user_id": params["user_id"]
-        }
+        try:
+            # Get the task service
+            task_service = self.services["task"]
+            
+            # Complete the task block
+            result = await task_service.complete_task_block(
+                block_id=params["block_id"],
+                user_id=params["user_id"],
+                proof_data=params.get("proof_data", {})
+            )
+            
+            if result.get("success"):
+                return {
+                    "status": "completed",
+                    "block_id": params["block_id"],
+                    "completion_time": datetime.now().isoformat(),
+                    "proof_valid": True,
+                    "tokens_earned": result.get("tokens_earned", 0),
+                    "user_id": params["user_id"],
+                    "next_break_minutes": result.get("next_break_minutes", 5)
+                }
+            else:
+                return {
+                    "status": "failed",
+                    "error": result.get("message", "Unknown error"),
+                    "block_id": params["block_id"],
+                    "user_id": params["user_id"]
+                }
+                
+        except Exception as e:
+            logger.error(f"Error completing task block: {e}")
+            return {
+                "status": "error",
+                "error": str(e),
+                "block_id": params["block_id"],
+                "user_id": params["user_id"]
+            }
     
     async def _handle_get_user_dashboard(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """Handle getting user dashboard"""
-        user_id = params["user_id"]
-        
-        # Get tasks
-        tasks_result = await self._handle_get_tasks({"user_id": user_id, "limit": 10})
-        
-        # Get mood analysis
-        mood_result = await self._handle_mood_analysis({"user_id": user_id, "days_back": 7})
-        
-        # Get user profile
-        profile_result = await self._handle_get_user_profile({"user_id": user_id})
-        
-        return {
-            "user_id": user_id,
-            "tasks": tasks_result,
-            "mood_analysis": mood_result,
-            "profile": profile_result,
-            "timestamp": datetime.now().isoformat()
-        }
+        try:
+            user_id = params["user_id"]
+            
+            # Get tasks
+            tasks_result = await self._handle_get_tasks({"user_id": user_id, "limit": 10})
+            
+            # Get mood analysis
+            mood_result = await self._handle_mood_analysis({"user_id": user_id, "days_back": 7})
+            
+            # Get user profile
+            profile_result = await self._handle_get_user_profile({"user_id": user_id})
+            
+            # Get task service for dashboard
+            task_service = self.services["task"]
+            dashboard_data = await task_service.get_user_dashboard(user_id)
+            
+            return {
+                "user_id": user_id,
+                "tasks": tasks_result,
+                "mood_analysis": mood_result,
+                "profile": profile_result,
+                "dashboard": dashboard_data,
+                "timestamp": datetime.now().isoformat()
+            }
+            
+        except Exception as e:
+            logger.error(f"Error getting user dashboard: {e}")
+            return {
+                "error": str(e),
+                "user_id": params["user_id"]
+            }
     
     async def _handle_log_mood(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """Handle mood logging"""
@@ -622,63 +706,148 @@ class UnifiedMCPSystem:
     
     async def _handle_get_user_profile(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """Handle getting user profile"""
-        store_service = self.services["store"]
-        
-        # Mock profile with gamification data
-        return {
-            "user_id": params["user_id"],
-            "points": 150,
-            "level": 5,
-            "achievements": ["first_task", "week_streak"],
-            "total_tasks_completed": 42,
-            "current_streak": 7
-        }
+        try:
+            store_service = self.services["store"]
+            profile = await store_service.get_user_profile(params["user_id"])
+            
+            return {
+                "user_id": params["user_id"],
+                "points": profile.currency,
+                "level": profile.stats.get("level", 1),
+                "achievements": profile.achievements,
+                "total_tasks_completed": profile.stats.get("tasks_completed", 0),
+                "current_streak": profile.stats.get("streak_days", 0),
+                "total_earned": profile.total_earned,
+                "total_spent": profile.total_spent
+            }
+            
+        except Exception as e:
+            logger.error(f"Error getting user profile: {e}")
+            return {
+                "error": str(e),
+                "user_id": params["user_id"]
+            }
     
     async def _handle_award_points(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """Handle awarding points"""
-        # Mock implementation
-        return {
-            "success": True,
-            "points_awarded": params["points"],
-            "reason": params["reason"],
-            "new_total": 175,  # Mock new total
-            "user_id": params["user_id"]
-        }
+        try:
+            store_service = self.services["store"]
+            
+            result = await store_service.add_currency(
+                user_id=params["user_id"],
+                amount=params["points"],
+                source="achievement",
+                metadata={"reason": params["reason"]}
+            )
+            
+            return {
+                "success": result.get("success", False),
+                "points_awarded": params["points"],
+                "reason": params["reason"],
+                "new_total": result.get("new_balance", 0),
+                "user_id": params["user_id"]
+            }
+            
+        except Exception as e:
+            logger.error(f"Error awarding points: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "user_id": params["user_id"]
+            }
     
     async def _handle_redeem_reward(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """Handle reward redemption"""
-        # Mock implementation
-        return {
-            "success": True,
-            "item_id": params["item_id"],
-            "points_spent": 50,  # Mock points spent
-            "remaining_points": 125,  # Mock remaining
-            "user_id": params["user_id"]
-        }
+        try:
+            store_service = self.services["store"]
+            
+            result = await store_service.purchase_item(
+                user_id=params["user_id"],
+                item_name=params["item_id"]
+            )
+            
+            return {
+                "success": result.get("success", False),
+                "item_id": params["item_id"],
+                "points_spent": result.get("new_balance", 0),
+                "remaining_points": result.get("new_balance", 0),
+                "user_id": params["user_id"]
+            }
+            
+        except Exception as e:
+            logger.error(f"Error redeeming reward: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "user_id": params["user_id"]
+            }
     
     async def _handle_play_spotify_playlist(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """Handle Spotify playlist playback"""
-        spotify_service = self.services["spotify"]
-        
-        # Mock implementation - integrate with real Spotify service
-        return {
-            "status": "playing",
-            "playlist_id": params["playlist_id"],
-            "device_id": params.get("device_id", "default"),
-            "user_id": params["user_id"]
-        }
+        try:
+            spotify_service = self.services["spotify"]
+            
+            result = await spotify_service.play_playlist(
+                playlist_uri=params["playlist_id"],
+                device_id=params.get("device_id", "default")
+            )
+            
+            return {
+                "status": "playing" if "✅" in result else "failed",
+                "playlist_id": params["playlist_id"],
+                "device_id": params.get("device_id", "default"),
+                "user_id": params["user_id"],
+                "message": result
+            }
+            
+        except Exception as e:
+            logger.error(f"Error playing Spotify playlist: {e}")
+            return {
+                "status": "error",
+                "error": str(e),
+                "playlist_id": params["playlist_id"],
+                "user_id": params["user_id"]
+            }
     
     async def _handle_add_calendar_event(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """Handle calendar event creation"""
-        # Mock implementation - integrate with real calendar service
-        return {
-            "success": True,
-            "event_id": f"cal_event_{datetime.now().timestamp()}",
-            "title": params["title"],
-            "start_time": params["start_time"],
-            "end_time": params["end_time"],
-            "user_id": params["user_id"]
-        }
+        try:
+            # For now, create a simple event record in memory
+            # TODO: Integrate with real calendar service (Google Calendar, etc.)
+            event_id = f"cal_event_{datetime.now().timestamp()}"
+            
+            # Store event in memory for now
+            await memory_manager.memory_store.store_memory(
+                "working",
+                f"calendar_event:{event_id}",
+                {
+                    "title": params["title"],
+                    "start_time": params["start_time"],
+                    "end_time": params["end_time"],
+                    "user_id": params["user_id"],
+                    "metadata": params.get("metadata", {}),
+                    "created_at": datetime.now().isoformat()
+                },
+                params["user_id"]
+            )
+            
+            return {
+                "success": True,
+                "event_id": event_id,
+                "title": params["title"],
+                "start_time": params["start_time"],
+                "end_time": params["end_time"],
+                "user_id": params["user_id"],
+                "note": "Event stored in memory (calendar integration pending)"
+            }
+            
+        except Exception as e:
+            logger.error(f"Error creating calendar event: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "user_id": params["user_id"]
+            }
 
 
 # Global unified MCP system instance

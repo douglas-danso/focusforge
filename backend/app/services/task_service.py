@@ -7,6 +7,7 @@ from app.services.store_service import StoreService
 from app.services.llm_service import LLMService
 from app.services.mood_service import MoodService
 import logging
+from app.services.user_service import UserService
 
 logger = logging.getLogger(__name__)
 
@@ -228,12 +229,21 @@ class TaskService:
                 for task in recent_tasks_result.get("tasks", [])
             ]
             
-            # TODO: Get user preferences from user service
-            # user_service = UserService(self.db)
-            # user_profile = await user_service.get_user_profile(user_id)
+            # Get user preferences from user service
+            user_service = UserService(self.db)
+            user_profile = await user_service.get_user(user_id)
+            
+            # Determine skill level from user profile or derive from completion rate
+            skill_level = "intermediate"
+            if user_profile:
+                # Could add skill level field to user model
+                if stats.get("completion_rate", 0) > 80:
+                    skill_level = "advanced"
+                elif stats.get("completion_rate", 0) < 50:
+                    skill_level = "beginner"
             
             context = {
-                "skill_level": "intermediate",  # TODO: Derive from user profile
+                "skill_level": skill_level,
                 "current_mood": mood_context.get("current_mood", "neutral"),
                 "mood_trend": mood_context.get("recent_trend", "stable"),
                 "needs_support": mood_context.get("needs_support", False),

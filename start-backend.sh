@@ -15,7 +15,7 @@ fi
 # Create .env file if it doesn't exist
 if [ ! -f .env ]; then
     echo "📝 Creating .env file from template..."
-    cp .env.template .env
+    cp .env.example .env
     echo "⚠️  Please edit .env file with your configuration before proceeding."
     read -p "Press Enter to continue..."
 fi
@@ -40,7 +40,7 @@ echo "   - Environment: ${DATABASE_NAME:-focusforge}"
 
 # Start backend services
 echo "🔧 Starting backend infrastructure..."
-docker-compose -f docker-compose.backend.yml up -d
+docker compose -f docker-compose.backend.yml up -d
 
 # Wait for services to be ready
 echo "⏳ Waiting for services to start..."
@@ -55,7 +55,7 @@ if curl -s http://localhost:8000/health > /dev/null; then
 else
     echo "❌ Backend API is not responding"
     echo "📋 Checking logs..."
-    docker-compose -f docker-compose.backend.yml logs backend
+    docker compose -f docker-compose.backend.yml logs backend
     exit 1
 fi
 
@@ -77,9 +77,9 @@ echo ""
 echo "🎉 Backend Service is ready!"
 echo ""
 echo "📋 Management Commands:"
-echo "   View logs: docker-compose -f docker-compose.backend.yml logs -f"
-echo "   Stop service: docker-compose -f docker-compose.backend.yml down"
-echo "   Restart service: docker-compose -f docker-compose.backend.yml restart"
+echo "   View logs: docker compose -f docker-compose.backend.yml logs -f"
+echo "   Stop service: docker compose -f docker-compose.backend.yml down"
+echo "   Restart service: docker compose -f docker-compose.backend.yml restart"
 echo "   Database shell: docker exec -it focusforge-mongo mongosh focusforge"
 echo "   Redis CLI: docker exec -it focusforge-redis redis-cli"
 echo ""

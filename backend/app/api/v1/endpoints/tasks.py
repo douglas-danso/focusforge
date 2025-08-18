@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi import APIRouter, HTTPException, Depends, Query, Header
 from typing import List, Optional, Dict, Any
 from app.models.schemas import TaskCreate, TaskUpdate, Task, TaskStatus
 from app.services.task_service import TaskService
@@ -7,11 +7,25 @@ from app.core.database import get_database
 
 router = APIRouter()
 
+async def get_current_user_id(authorization: str = Header(None)) -> str:
+    """Extract user ID from authorization header"""
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Authorization header required")
+    
+    # TODO: Implement proper JWT token validation
+    # For now, assume the header contains the user ID directly
+    # In production, this should validate JWT tokens
+    user_id = authorization.replace("Bearer ", "").strip()
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid authorization token")
+    
+    return user_id
+
 @router.post("/", response_model=Dict[str, Any])
 async def create_task(
     task: TaskCreate,
     auto_breakdown: bool = Query(True, description="Auto-breakdown task using AI agents"),
-    user_id: str = "default",  # TODO: Get from auth
+    user_id: str = Depends(get_current_user_id),
     db=Depends(get_database)
 ):
     """Create a new task with comprehensive AI agent guidance"""
@@ -28,14 +42,14 @@ async def create_task(
 
 @router.get("/", response_model=Dict[str, Any])
 async def get_tasks(
-    user_id: str = "default",  # TODO: Get from auth
+    user_id: str = Depends(get_current_user_id),
     status: Optional[TaskStatus] = None,
     category: Optional[str] = None,
     include_blocks: bool = False,
     limit: int = 50,
     db=Depends(get_database)
 ):
-    """Get all tasks for a user with filtering options"""
+    """Get user tasks with optional filtering"""
     try:
         task_service = TaskService(db)
         result = await task_service.get_user_tasks(
@@ -47,10 +61,10 @@ async def get_tasks(
 
 @router.get("/dashboard", response_model=Dict[str, Any])
 async def get_dashboard(
-    user_id: str = "default",  # TODO: Get from auth
+    user_id: str = Depends(get_current_user_id),
     db=Depends(get_database)
 ):
-    """Get comprehensive dashboard with AI insights"""
+    """Get user dashboard with comprehensive data"""
     try:
         task_service = TaskService(db)
         dashboard = await task_service.get_user_dashboard(user_id)
@@ -62,16 +76,20 @@ async def get_dashboard(
 async def get_task(
     task_id: str,
     include_blocks: bool = True,
-    user_id: str = "default",  # TODO: Get from auth
+    user_id: str = Depends(get_current_user_id),
     db=Depends(get_database)
 ):
-    """Get a specific task with blocks and guidance"""
+    """Get a specific task with optional blocks"""
     try:
         task_service = TaskService(db)
-        task = await task_service.get_task(task_id, user_id, include_blocks)
-        if not task:
+        result = await task_service.get_task(task_id, user_id, include_blocks)
+        
+        if not result:
             raise HTTPException(status_code=404, detail="Task not found")
-        return task
+        
+        return result
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -90,33 +108,45 @@ async def get_task_guidance(
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/{task_id}/blocks/{block_id}/start", response_model=Dict[str, Any])
-async def start_block(
+async def start_task_block(
     task_id: str,
     block_id: str,
-    user_id: str = "default",  # TODO: Get from auth
+    user_id: str = Depends(get_current_user_id),
     db=Depends(get_database)
 ):
     """Start working on a specific task block"""
     try:
         task_service = TaskService(db)
         result = await task_service.start_task_block(block_id, user_id)
+        
+        if not result["success"]:
+            raise HTTPException(status_code=400, detail=result.get("message", "Failed to start block"))
+        
         return result
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/{task_id}/blocks/{block_id}/complete", response_model=Dict[str, Any])
-async def complete_block(
+async def complete_task_block(
     task_id: str,
     block_id: str,
     proof_data: Optional[Dict[str, Any]] = None,
-    user_id: str = "default",  # TODO: Get from auth
+    user_id: str = Depends(get_current_user_id),
     db=Depends(get_database)
 ):
-    """Complete a task block with AI-powered proof validation"""
+    """Complete a task block with optional proof"""
     try:
         task_service = TaskService(db)
         result = await task_service.complete_task_block(block_id, user_id, proof_data)
+        
+        if not result["success"]:
+            raise HTTPException(status_code=400, detail=result.get("message", "Failed to complete block"))
+        
         return result
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -137,10 +167,10 @@ async def regenerate_blocks(
 @router.get("/motivation/support", response_model=Dict[str, Any])
 async def get_motivational_support(
     challenge: str = Query("", description="Current challenge or obstacle"),
-    user_id: str = "default",  # TODO: Get from auth
+    user_id: str = Depends(get_current_user_id),
     db=Depends(get_database)
 ):
-    """Get personalized motivational support from AI coach"""
+    """Get motivational support from AI agents"""
     try:
         task_service = TaskService(db)
         support = await task_service.get_motivational_support(user_id, challenge)
@@ -151,7 +181,7 @@ async def get_motivational_support(
 @router.get("/rituals/suggest", response_model=Dict[str, Any])
 async def suggest_ritual(
     task_type: str = Query("general", description="Type of task to prepare for"),
-    user_id: str = "default",  # TODO: Get from auth
+    user_id: str = Depends(get_current_user_id),
     db=Depends(get_database)
 ):
     """Get personalized productivity ritual suggestion"""
@@ -166,31 +196,39 @@ async def suggest_ritual(
 async def update_task(
     task_id: str,
     task_update: TaskUpdate,
-    user_id: str = "default",  # TODO: Get from auth
+    user_id: str = Depends(get_current_user_id),
     db=Depends(get_database)
 ):
-    """Update a task with regeneration suggestions"""
+    """Update a task"""
     try:
         task_service = TaskService(db)
-        updated_task = await task_service.update_task(task_id, user_id, task_update)
-        if not updated_task:
+        result = await task_service.update_task(task_id, user_id, task_update)
+        
+        if not result:
             raise HTTPException(status_code=404, detail="Task not found")
-        return updated_task
+        
+        return result
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.delete("/{task_id}", response_model=Dict[str, Any])
 async def delete_task(
     task_id: str,
-    user_id: str = "default",  # TODO: Get from auth
+    user_id: str = Depends(get_current_user_id),
     db=Depends(get_database)
 ):
-    """Delete a task and all associated blocks"""
+    """Delete a task"""
     try:
         task_service = TaskService(db)
         result = await task_service.delete_task(task_id, user_id)
+        
         if not result["success"]:
-            raise HTTPException(status_code=404, detail="Task not found")
+            raise HTTPException(status_code=404, detail=result.get("message", "Task not found"))
+        
         return result
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

@@ -179,6 +179,11 @@ class LLMService:
             logger.error(f"Error validating proof: {e}")
             return {"is_valid": False, "score": 0}
     
+    async def validate_task_completion(self, task_description: str, completion_proof: str, 
+                                     completion_criteria: str = "") -> Dict[str, Any]:
+        """Validate task completion proof (alias for validate_task_proof)"""
+        return await self.validate_task_proof(task_description, completion_proof, completion_criteria)
+    
     async def suggest_ritual(self, user_mood: str, task_type: str, 
                            time_of_day: str, user_preferences: Dict = None, 
                            ritual_history: List = None) -> Dict[str, Any]:
