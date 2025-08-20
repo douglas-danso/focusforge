@@ -24,11 +24,16 @@ class Settings(BaseSettings):
     SPOTIPY_CLIENT_SECRET: str = os.getenv("SPOTIPY_CLIENT_SECRET", "")
     SPOTIPY_REDIRECT_URI: str = os.getenv("SPOTIPY_REDIRECT_URI", "http://localhost:3000/callback")
     
-    # Google Calendar settings
+    # Google OAuth settings (used for both Calendar and Authentication)
     GOOGLE_CLIENT_ID: str = os.getenv("GOOGLE_CLIENT_ID", "")
     GOOGLE_CLIENT_SECRET: str = os.getenv("GOOGLE_CLIENT_SECRET", "")
-    GOOGLE_REDIRECT_URI: str = os.getenv("GOOGLE_REDIRECT_URI", "http://localhost:8000/auth/google/callback")
+    GOOGLE_REDIRECT_URI: str = os.getenv("GOOGLE_REDIRECT_URI", "http://localhost:8000/api/v1/auth/google/callback")
     GOOGLE_CREDENTIALS_DIR: str = os.getenv("GOOGLE_CREDENTIALS_DIR", "./credentials")
+    
+    # JWT settings
+    JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY", os.getenv("SECRET_KEY", "your-secret-key-change-in-production"))
+    JWT_ALGORITHM: str = "HS256"
+    JWT_EXPIRATION_HOURS: int = int(os.getenv("JWT_EXPIRATION_HOURS", "24"))
     
     # File upload settings
     UPLOAD_DIR: str = os.getenv("UPLOAD_DIR", "./uploads")

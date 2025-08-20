@@ -4,6 +4,7 @@ from typing import Optional, Dict, Any, List
 from app.models.schemas import SpotifyPlaylistSearch, SpotifyPlaylistCreate
 from app.services.spotify_service import SpotifyService
 from app.core.database import get_database
+from app.core.auth import get_current_user_from_token
 
 router = APIRouter()
 
@@ -173,7 +174,7 @@ async def get_current_playback():
 @router.post("/play/{playlist_uri}")
 async def play_playlist(
     playlist_uri: str,
-    user_id: str = "default",
+    user_id: str = Depends(get_current_user_from_token),
     device_id: Optional[str] = Query(None, description="Specific device ID to play on")
 ):
     """Play a Spotify playlist (requires user auth)"""
@@ -199,7 +200,7 @@ async def play_playlist(
 
 @router.post("/pause")
 async def pause_playback(
-    user_id: str = "default",
+    user_id: str = Depends(get_current_user_from_token),
     device_id: Optional[str] = Query(None, description="Specific device ID")
 ):
     """Pause Spotify playback (requires user auth)"""
@@ -224,7 +225,7 @@ async def pause_playback(
 
 @router.post("/next")
 async def next_track(
-    user_id: str = "default",
+    user_id: str = Depends(get_current_user_from_token),
     device_id: Optional[str] = Query(None, description="Specific device ID")
 ):
     """Skip to next track (requires user auth)"""
@@ -250,7 +251,7 @@ async def next_track(
 @router.post("/play-by-mood/{mood}")
 async def play_by_mood(
     mood: str,
-    user_id: str = "default",
+    user_id: str = Depends(get_current_user_from_token),
     device_id: Optional[str] = Query(None, description="Specific device ID")
 ):
     """Play playlist based on mood (searches publicly, but requires user auth to play)"""
@@ -277,7 +278,7 @@ async def play_by_mood(
 @router.post("/search/playlists")
 async def search_playlists(
     search_data: SpotifyPlaylistSearch,
-    user_id: str = "default",
+    user_id: str = Depends(get_current_user_from_token),
 ):
     """Search Spotify playlists (works with client credentials)"""
     try:
@@ -303,7 +304,7 @@ async def search_playlists(
 @router.post("/search/tracks")
 async def search_tracks(
     search_data: TrackSearchRequest,
-    user_id: str = "default",
+    user_id: str = Depends(get_current_user_from_token),
 ):
     """Search Spotify tracks (works with client credentials)"""
     try:
@@ -329,7 +330,7 @@ async def search_tracks(
 @router.post("/playlist/tracks")
 async def get_playlist_tracks(
     request: PlaylistTracksRequest,
-    user_id: str = "default",
+    user_id: str = Depends(get_current_user_from_token),
 ):
     """Get tracks from a playlist (works with client credentials for public playlists)"""
     try:
@@ -356,7 +357,7 @@ async def get_playlist_tracks(
 @router.post("/create-playlist")
 async def create_playlist(
     playlist_data: SpotifyPlaylistCreate,
-    user_id: str = "default",
+    user_id: str = Depends(get_current_user_from_token),
 ):
     """Create a new Spotify playlist (requires user auth)"""
     try:
@@ -386,7 +387,7 @@ async def create_playlist(
 @router.post("/search")
 async def search_playlists_legacy(
     search_data: SpotifyPlaylistSearch,
-    user_id: str = "default",
+    user_id: str = Depends(get_current_user_from_token),
 ):
     """Search Spotify playlists (legacy endpoint for backward compatibility)"""
     return await search_playlists(search_data, user_id)

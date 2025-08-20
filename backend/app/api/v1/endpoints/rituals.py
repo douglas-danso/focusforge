@@ -11,6 +11,7 @@ from app.services.ritual_service import RitualService
 from app.models.schemas import RitualCreate, Ritual, RitualStep
 from app.models.api_schemas import validate_user_id
 from app.core.database import get_database
+from app.core.auth import get_current_user_from_token
 
 router = APIRouter()
 
@@ -19,7 +20,7 @@ router = APIRouter()
 @router.post("/", response_model=Dict[str, Any])
 async def create_custom_ritual(
     ritual_data: RitualCreate,
-    user_id: str = Query(..., description="User ID"),
+    user_id: str = Depends(get_current_user_from_token),
     db=Depends(get_database)
 ):
     """Create a custom focus ritual"""
@@ -50,7 +51,7 @@ async def create_custom_ritual(
 
 @router.get("/", response_model=List[Dict[str, Any]])
 async def get_user_rituals(
-    user_id: str = Query(..., description="User ID"),
+    user_id: str = Depends(get_current_user_from_token),
     include_public: bool = Query(True, description="Include public rituals"),
     category: Optional[str] = Query(None, description="Filter by category"),
     db=Depends(get_database)
@@ -90,7 +91,7 @@ async def get_user_rituals(
 @router.get("/{ritual_id}")
 async def get_ritual_details(
     ritual_id: str = Path(..., description="Ritual ID"),
-    user_id: str = Query(..., description="User ID"),
+    user_id: str = Depends(get_current_user_from_token),
     db=Depends(get_database)
 ):
     """Get detailed information about a specific ritual"""
@@ -153,7 +154,7 @@ async def get_ritual_details(
 @router.post("/{ritual_id}/execute")
 async def start_ritual_execution(
     ritual_id: str = Path(..., description="Ritual ID"),
-    user_id: str = Query(..., description="User ID"),
+    user_id: str = Depends(get_current_user_from_token),
     context: Optional[Dict[str, Any]] = None,
     db=Depends(get_database)
 ):
@@ -191,7 +192,7 @@ async def start_ritual_execution(
 @router.post("/executions/{execution_id}/advance")
 async def advance_ritual_step(
     execution_id: str = Path(..., description="Execution ID"),
-    user_id: str = Query(..., description="User ID"),
+    user_id: str = Depends(get_current_user_from_token),
     step_feedback: Optional[Dict[str, Any]] = None,
     db=Depends(get_database)
 ):
@@ -215,7 +216,7 @@ async def advance_ritual_step(
 @router.post("/executions/{execution_id}/complete")
 async def complete_ritual_execution(
     execution_id: str = Path(..., description="Execution ID"),
-    user_id: str = Query(..., description="User ID"),
+    user_id: str = Depends(get_current_user_from_token),
     effectiveness_rating: int = Query(..., ge=1, le=10, description="Effectiveness rating (1-10)"),
     notes: Optional[str] = Query(None, description="Optional notes about the ritual"),
     db=Depends(get_database)
@@ -286,7 +287,7 @@ async def get_ritual_templates(
 @router.post("/templates/{template_name}/create")
 async def create_ritual_from_template(
     template_name: str = Path(..., description="Template name"),
-    user_id: str = Query(..., description="User ID"),
+    user_id: str = Depends(get_current_user_from_token),
     customizations: Optional[Dict[str, Any]] = None,
     db=Depends(get_database)
 ):
@@ -321,7 +322,7 @@ async def create_ritual_from_template(
 
 @router.post("/meditation/start")
 async def start_meditation_session(
-    user_id: str = Query(..., description="User ID"),
+    user_id: str = Depends(get_current_user_from_token),
     meditation_type: str = Query("breathing", description="Meditation type"),
     duration_minutes: int = Query(5, ge=1, le=60, description="Duration in minutes"),
     guidance_voice: str = Query("calm_female", description="Guidance voice"),
@@ -357,7 +358,7 @@ async def start_meditation_session(
 @router.post("/meditation/{session_id}/complete")
 async def complete_meditation_session(
     session_id: str = Path(..., description="Meditation session ID"),
-    user_id: str = Query(..., description="User ID"),
+    user_id: str = Depends(get_current_user_from_token),
     mood_after: Optional[str] = Query(None, description="Mood after meditation"),
     effectiveness_rating: int = Query(..., ge=1, le=10, description="Effectiveness rating (1-10)"),
     notes: Optional[str] = Query(None, description="Session notes"),
@@ -392,7 +393,7 @@ async def complete_meditation_session(
 
 @router.get("/analytics/usage")
 async def get_ritual_analytics(
-    user_id: str = Query(..., description="User ID"),
+    user_id: str = Depends(get_current_user_from_token),
     days_back: int = Query(30, ge=1, le=365, description="Days to analyze"),
     db=Depends(get_database)
 ):

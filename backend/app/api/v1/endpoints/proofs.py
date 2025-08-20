@@ -13,6 +13,7 @@ from app.services.proof_service import ProofService
 from app.models.schemas import EnhancedTaskCompletion, ProofSubmission, ProofType
 from app.models.api_schemas import validate_user_id
 from app.core.database import get_database
+from app.core.auth import get_current_user_from_token
 
 router = APIRouter()
 
@@ -21,7 +22,7 @@ router = APIRouter()
 @router.post("/submit")
 async def submit_enhanced_proof(
     task_id: str = Form(..., description="Task ID"),
-    user_id: str = Query(..., description="User ID"),
+    user_id: str = Depends(get_current_user_from_token),
     completion_note: Optional[str] = Form(None, description="Completion notes"),
     completion_confidence: int = Form(5, ge=1, le=10, description="Completion confidence (1-10)"),
     time_spent_minutes: Optional[int] = Form(None, description="Time spent in minutes"),
@@ -119,7 +120,7 @@ async def submit_enhanced_proof(
 @router.post("/submit-simple")
 async def submit_simple_proof(
     task_id: str = Query(..., description="Task ID"),
-    user_id: str = Query(..., description="User ID"),
+    user_id: str = Depends(get_current_user_from_token),
     proof_text: str = Form(..., description="Text proof of completion"),
     completion_confidence: int = Form(5, ge=1, le=10, description="Completion confidence"),
     time_spent_minutes: Optional[int] = Form(None, description="Time spent"),
@@ -158,7 +159,7 @@ async def submit_simple_proof(
 
 @router.get("/history")
 async def get_proof_history(
-    user_id: str = Query(..., description="User ID"),
+    user_id: str = Depends(get_current_user_from_token),
     limit: int = Query(20, ge=1, le=100, description="Number of proofs to return"),
     task_id: Optional[str] = Query(None, description="Filter by task ID"),
     db=Depends(get_database)
@@ -204,7 +205,7 @@ async def get_proof_history(
 @router.get("/{proof_id}")
 async def get_proof_details(
     proof_id: str,
-    user_id: str = Query(..., description="User ID"),
+    user_id: str = Depends(get_current_user_from_token),
     db=Depends(get_database)
 ):
     """Get detailed information about a specific proof submission"""
@@ -254,7 +255,7 @@ async def get_proof_details(
 @router.get("/files/{file_path:path}")
 async def get_uploaded_file(
     file_path: str,
-    user_id: str = Query(..., description="User ID")
+    user_id: str = Depends(get_current_user_from_token)
 ):
     """Retrieve an uploaded proof file"""
     try:
@@ -284,7 +285,7 @@ async def get_uploaded_file(
 @router.delete("/files/{file_path:path}")
 async def delete_uploaded_file(
     file_path: str,
-    user_id: str = Query(..., description="User ID"),
+    user_id: str = Depends(get_current_user_from_token),
     db=Depends(get_database)
 ):
     """Delete an uploaded proof file"""
@@ -331,7 +332,7 @@ async def delete_uploaded_file(
 
 @router.get("/analytics/overview")
 async def get_proof_analytics(
-    user_id: str = Query(..., description="User ID"),
+    user_id: str = Depends(get_current_user_from_token),
     days_back: int = Query(30, ge=1, le=365, description="Days to analyze"),
     db=Depends(get_database)
 ):
@@ -354,7 +355,7 @@ async def get_proof_analytics(
 
 @router.get("/analytics/validation-trends")
 async def get_validation_trends(
-    user_id: str = Query(..., description="User ID"),
+    user_id: str = Depends(get_current_user_from_token),
     days_back: int = Query(30, ge=1, le=365, description="Days to analyze"),
     db=Depends(get_database)
 ):

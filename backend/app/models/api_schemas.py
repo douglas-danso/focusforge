@@ -36,7 +36,6 @@ class MCPToolCategory(str, Enum):
 
 class BaseResponse(BaseModel):
     success: bool
-    timestamp: Optional[datetime] = Field(default_factory=datetime.now)
 
 
 class ErrorResponse(BaseResponse):

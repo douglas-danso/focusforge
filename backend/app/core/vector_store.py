@@ -186,19 +186,18 @@ class VectorStore:
                     # Apply user filter
                     if user_id and metadata.get("user_id") != user_id:
                         continue
-                    
-                                # Apply metadata filter
-            if metadata_filter:
-                if not all(metadata.get(k) == v 
-                          for k, v in metadata_filter.items()):
-                    continue
+                
+                    # Apply metadata filter
+                    if metadata_filter:
+                        if not all(metadata.get(k) == v for k, v in metadata_filter.items()):
+                            continue
                     
                     results.append({
                         "score": float(score),
                         "metadata": metadata,
                         "index": int(idx)
                     })
-            
+        
             # Sort by score (higher is better for inner product)
             results.sort(key=lambda x: x["score"], reverse=True)
             
@@ -301,7 +300,7 @@ class VectorStore:
                 "openai_available": self.openai_client is not None
             }
             
-            if self.db:
+            if self.db is not None:
                 collection = self.db[self.collection_name]
                 stats["database_vectors"] = await collection.count_documents({})
             

@@ -22,9 +22,12 @@ class UserUpdate(BaseModel):
 class User(UserBase):
     id: str = Field(alias="_id")
     is_active: bool = True
+    auth_provider: Optional[str] = None  # "google", "local", etc.
+    google_id: Optional[str] = None
+    profile_picture: Optional[str] = None
     created_at: datetime
     updated_at: datetime
-    
+
     class Config:
         populate_by_name = True
 
@@ -537,13 +540,13 @@ class RitualStep(BaseModel):
     spotify_search_query: Optional[str] = None
     
     # Meditation options
-    meditation_type: Optional[str] = Field(None, regex="^(breathing|body_scan|mindfulness|focus)$")
-    meditation_voice: Optional[str] = Field(None, regex="^(calm_female|calm_male|energetic_female|energetic_male)$")
-    meditation_background: Optional[str] = Field(None, regex="^(nature|rain|ocean|birds|silence)$")
+    meditation_type: Optional[str] = Field(None, pattern="^(breathing|body_scan|mindfulness|focus)$")
+    meditation_voice: Optional[str] = Field(None, pattern="^(calm_female|calm_male|energetic_female|energetic_male)$")
+    meditation_background: Optional[str] = Field(None, pattern="^(nature|rain|ocean|birds|silence)$")
     
     # Breathing exercise options
-    breathing_pattern: Optional[str] = Field(None, regex="^(4-4-4-4|4-7-8|breath_of_fire|4-4-6-2)$")
-    
+    breathing_pattern: Optional[str] = Field(None, pattern="^(4-4-4-4|4-7-8|breath_of_fire|4-4-6-2)$")
+
     # Environment setup
     setup_instructions: Optional[List[str]] = None
     
@@ -566,7 +569,7 @@ class RitualStep(BaseModel):
 class RitualCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
     description: str = Field(..., min_length=1, max_length=1000)
-    category: str = Field(..., regex="^(deep_work|energy|calm|creative|study|presentation|custom)$")
+    category: str = Field(..., pattern="^(deep_work|energy|calm|creative|study|presentation|custom)$")
     estimated_duration_minutes: int = Field(..., ge=1, le=60)
     steps: List[RitualStep] = Field(..., min_items=1, max_items=10)
     tags: List[str] = Field(default_factory=list, max_items=10)
@@ -613,8 +616,8 @@ class MeditationType(str, Enum):
 class MeditationSessionCreate(BaseModel):
     type: MeditationType = MeditationType.BREATHING
     duration_minutes: int = Field(5, ge=1, le=60)
-    guidance_voice: str = Field("calm_female", regex="^(calm_female|calm_male|energetic_female|energetic_male)$")
-    background_sound: str = Field("nature", regex="^(nature|rain|ocean|birds|silence)$")
+    guidance_voice: str = Field("calm_female", pattern="^(calm_female|calm_male|energetic_female|energetic_male)$")
+    background_sound: str = Field("nature", pattern="^(nature|rain|ocean|birds|silence)$")
     mood_before: Optional[str] = None
 
 class MeditationSession(BaseModel):

@@ -3,13 +3,14 @@ from typing import List
 from app.models.schemas import PomodoroSessionCreate, PomodoroSession
 from app.services.pomodoro_service import PomodoroService
 from app.core.database import get_database
+from app.core.auth import get_current_user_from_token
 
 router = APIRouter()
 
 @router.post("/start", response_model=PomodoroSession)
 async def start_pomodoro_session(
     session_data: PomodoroSessionCreate,
-    user_id: str = "default",  # TODO: Get from auth
+    user_id: str = Depends(get_current_user_from_token),
     db=Depends(get_database)
 ):
     """Start a new Pomodoro session"""
@@ -23,7 +24,7 @@ async def start_pomodoro_session(
 @router.put("/{session_id}/complete")
 async def complete_pomodoro_session(
     session_id: str,
-    user_id: str = "default",  # TODO: Get from auth
+    user_id: str = Depends(get_current_user_from_token),
     db=Depends(get_database)
 ):
     """Complete a Pomodoro session"""
@@ -38,7 +39,7 @@ async def complete_pomodoro_session(
 
 @router.get("/", response_model=List[PomodoroSession])
 async def get_pomodoro_sessions(
-    user_id: str = "default",  # TODO: Get from auth
+    user_id: str = Depends(get_current_user_from_token),
     task_id: str = None,
     db=Depends(get_database)
 ):
@@ -53,7 +54,7 @@ async def get_pomodoro_sessions(
 @router.get("/{session_id}", response_model=PomodoroSession)
 async def get_pomodoro_session(
     session_id: str,
-    user_id: str = "default",  # TODO: Get from auth
+    user_id: str = Depends(get_current_user_from_token),
     db=Depends(get_database)
 ):
     """Get a specific Pomodoro session"""

@@ -3,13 +3,14 @@ from typing import List
 from app.models.schemas import MoodLogCreate, MoodLog
 from app.services.mood_service import MoodService
 from app.core.database import get_database
+from app.core.auth import get_current_user_from_token
 
 router = APIRouter()
 
 @router.post("/", response_model=MoodLog)
 async def log_mood(
     mood_data: MoodLogCreate,
-    user_id: str = "default",  # TODO: Get from auth
+    user_id: str = Depends(get_current_user_from_token),
     db=Depends(get_database)
 ):
     """Log a mood entry"""
@@ -22,7 +23,7 @@ async def log_mood(
 
 @router.get("/", response_model=List[MoodLog])
 async def get_mood_logs(
-    user_id: str = "default",  # TODO: Get from auth
+    user_id: str = Depends(get_current_user_from_token),
     limit: int = 100,
     db=Depends(get_database)
 ):
@@ -36,7 +37,7 @@ async def get_mood_logs(
 
 @router.get("/trends")
 async def get_mood_trends(
-    user_id: str = "default",  # TODO: Get from auth
+    user_id: str = Depends(get_current_user_from_token),
     db=Depends(get_database)
 ):
     """Get mood trends for a user"""
@@ -49,7 +50,7 @@ async def get_mood_trends(
 
 @router.delete("/today")
 async def reset_today_mood_logs(
-    user_id: str = "default",  # TODO: Get from auth
+    user_id: str = Depends(get_current_user_from_token),
     db=Depends(get_database)
 ):
     """Reset today's mood logs"""

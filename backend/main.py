@@ -9,6 +9,8 @@ from app.core.orchestrator import mcp_orchestrator
 from app.core.memory import memory_manager
 from app.core.background_tasks import task_scheduler
 from app.core.vector_store import vector_store
+from app.core.auth import auth_service
+from app.core.middleware import AuthenticationMiddleware
 import logging
 
 # Configure logging
@@ -71,11 +73,21 @@ async def shutdown_event():
     except Exception as e:
         logging.error(f"Orchestrator shutdown error: {e}")
     
+    # Close auth service HTTP client
+    try:
+        await auth_service.close()
+        logging.info("Auth service shutdown complete")
+    except Exception as e:
+        logging.error(f"Error during auth service shutdown: {e}")
+    
     # Close MongoDB connection
     await close_mongo_connection()
     logging.info("MongoDB connection closed")
     
     logging.info("FocusForge backend shutdown complete")
+
+# Add authentication middleware
+app.add_middleware(AuthenticationMiddleware)
 
 # Set all CORS enabled origins
 app.add_middleware(

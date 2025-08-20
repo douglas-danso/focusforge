@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.v1.endpoints import tasks, users, pomodoro, mood, analytics, spotify, store, calendar
+from app.api.v1.endpoints import tasks, users, pomodoro, mood, analytics, spotify, store, calendar, auth
 
 # Import new endpoints
 try:
@@ -29,6 +29,9 @@ except ImportError:
     orchestrator_available = False
 
 api_router = APIRouter()
+
+# Authentication routes (no auth required)
+api_router.include_router(auth.router, prefix="/auth", tags=["authentication"])
 
 api_router.include_router(users.router, prefix="/users", tags=["users"])
 api_router.include_router(tasks.router, prefix="/tasks", tags=["tasks"])

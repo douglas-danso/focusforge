@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from app.models.schemas import StoreItem, UserProfile
 from app.services.store_service import StoreService
 from app.core.database import get_database
+from app.core.auth import get_current_user_from_token
 
 router = APIRouter()
 
@@ -42,7 +43,7 @@ class CustomItemRequest(BaseModel):
 @router.get("/items", response_model=List[StoreItem])
 async def get_store_items(
     category: Optional[str] = Query(None, description="Filter by category"),
-    user_id: str = Query("default", description="User ID for personalization"),
+    user_id: str = Depends(get_current_user_from_token),
     db=Depends(get_database)
 ):
     """Get store items with optional filtering and personalization"""
@@ -66,7 +67,7 @@ async def get_store_categories(db=Depends(get_database)):
 # User Profile & Currency Endpoints
 @router.get("/profile", response_model=UserProfile)
 async def get_user_profile(
-    user_id: str = Query("default", description="User ID"),
+    user_id: str = Depends(get_current_user_from_token),
     db=Depends(get_database)
 ):
     """Get user profile with currency, purchases, and stats"""
@@ -83,7 +84,7 @@ async def add_currency(
     source: str = Query("manual", description="Source of currency"),
     task_id: Optional[str] = Query(None, description="Associated task ID"),
     bonus_multiplier: float = Query(1.0, ge=0.1, le=5.0, description="Bonus multiplier"),
-    user_id: str = Query("default", description="User ID"),
+    user_id: str = Depends(get_current_user_from_token),
     db=Depends(get_database)
 ):
     """Add currency to user profile with bonus system"""
@@ -110,7 +111,7 @@ async def add_currency(
 @router.post("/purchase/{item_name}", response_model=PurchaseResponse)
 async def purchase_item(
     item_name: str,
-    user_id: str = Query("default", description="User ID"),
+    user_id: str = Depends(get_current_user_from_token),
     db=Depends(get_database)
 ):
     """Purchase an item from the store"""
@@ -135,7 +136,7 @@ async def purchase_item(
 
 @router.get("/rewards/active")
 async def get_active_rewards(
-    user_id: str = Query("default", description="User ID"),
+    user_id: str = Depends(get_current_user_from_token),
     db=Depends(get_database)
 ):
     """Get user's active (unused) rewards"""
@@ -153,7 +154,7 @@ async def get_active_rewards(
 @router.post("/rewards/{reward_id}/use")
 async def use_reward(
     reward_id: str,
-    user_id: str = Query("default", description="User ID"),
+    user_id: str = Depends(get_current_user_from_token),
     db=Depends(get_database)
 ):
     """Use/consume a reward"""
@@ -173,7 +174,7 @@ async def use_reward(
 # Statistics & Analytics Endpoints
 @router.get("/stats")
 async def get_user_stats(
-    user_id: str = Query("default", description="User ID"),
+    user_id: str = Depends(get_current_user_from_token),
     db=Depends(get_database)
 ):
     """Get comprehensive user statistics"""
@@ -192,7 +193,7 @@ async def get_user_stats(
 
 @router.get("/insights/spending")
 async def get_spending_insights(
-    user_id: str = Query("default", description="User ID"),
+    user_id: str = Depends(get_current_user_from_token),
     db=Depends(get_database)
 ):
     """Get user spending insights and recommendations"""

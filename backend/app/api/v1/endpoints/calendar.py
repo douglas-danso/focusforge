@@ -11,6 +11,7 @@ from app.services.calendar_service import CalendarService
 from app.models.schemas import CalendarEvent, CalendarEventCreate
 from app.models.api_schemas import validate_user_id
 from app.core.database import get_database
+from app.core.auth import get_current_user_from_token
 
 router = APIRouter()
 
@@ -18,7 +19,7 @@ router = APIRouter()
 
 @router.get("/google/auth-url")
 async def get_google_auth_url(
-    user_id: str = Query(..., description="User ID")
+    user_id: str = Depends(get_current_user_from_token)
 ):
     """Get Google Calendar authorization URL"""
     try:
@@ -44,7 +45,7 @@ async def get_google_auth_url(
 @router.post("/google/authorize")
 async def authorize_google_calendar(
     authorization_code: str = Query(..., description="Authorization code from Google"),
-    user_id: str = Query(..., description="User ID")
+    user_id: str = Depends(get_current_user_from_token)
 ):
     """Authorize Google Calendar integration"""
     try:
@@ -70,7 +71,7 @@ async def authorize_google_calendar(
 
 @router.get("/google/status")
 async def get_google_calendar_status(
-    user_id: str = Query(..., description="User ID")
+    user_id: str = Depends(get_current_user_from_token)
 ):
     """Check Google Calendar connection status"""
     try:
@@ -89,7 +90,7 @@ async def get_google_calendar_status(
 
 @router.post("/google/sync")
 async def sync_google_calendar(
-    user_id: str = Query(..., description="User ID"),
+    user_id: str = Depends(get_current_user_from_token),
     background_tasks: BackgroundTasks = None
 ):
     """Sync with Google Calendar"""
@@ -118,7 +119,7 @@ async def sync_google_calendar(
 @router.post("/events", response_model=Dict[str, Any])
 async def create_calendar_event(
     event_data: CalendarEventCreate,
-    user_id: str = Query(..., description="User ID"),
+    user_id: str = Depends(get_current_user_from_token),
     sync_to_google: bool = Query(True, description="Sync to Google Calendar"),
     db=Depends(get_database)
 ):
@@ -152,7 +153,7 @@ async def create_calendar_event(
 async def create_task_calendar_events(
     task_id: str = Path(..., description="Task ID"),
     task_title: str = Query(..., description="Task title"),
-    user_id: str = Query(..., description="User ID"),
+    user_id: str = Depends(get_current_user_from_token),
     spacing_hours: int = Query(1, description="Hours between task blocks"),
     start_time: Optional[str] = Query(None, description="Start time for first block (ISO format)"),
     db=Depends(get_database)
@@ -260,7 +261,7 @@ async def create_task_calendar_events(
 
 @router.get("/events", response_model=List[Dict[str, Any]])
 async def get_calendar_events(
-    user_id: str = Query(..., description="User ID"),
+    user_id: str = Depends(get_current_user_from_token),
     start_date: Optional[str] = Query(None, description="Start date (ISO format)"),
     end_date: Optional[str] = Query(None, description="End date (ISO format)"),
     include_google: bool = Query(True, description="Include Google Calendar events"),
@@ -320,7 +321,7 @@ async def get_calendar_events(
 @router.get("/view/{view_type}")
 async def get_calendar_view(
     view_type: str = Path(..., description="View type: day, week, month"),
-    user_id: str = Query(..., description="User ID"),
+    user_id: str = Depends(get_current_user_from_token),
     start_date: Optional[str] = Query(None, description="Start date (ISO format)"),
     include_stats: bool = Query(True, description="Include productivity statistics"),
     db=Depends(get_database)
@@ -372,7 +373,7 @@ async def get_calendar_view(
 async def update_calendar_event(
     event_id: str = Path(..., description="Event ID"),
     updates: Dict[str, Any] = None,
-    user_id: str = Query(..., description="User ID"),
+    user_id: str = Depends(get_current_user_from_token),
     sync_to_google: bool = Query(True, description="Sync to Google Calendar"),
     db=Depends(get_database)
 ):
@@ -411,7 +412,7 @@ async def update_calendar_event(
 @router.delete("/events/{event_id}")
 async def delete_calendar_event(
     event_id: str = Path(..., description="Event ID"),
-    user_id: str = Query(..., description="User ID"),
+    user_id: str = Depends(get_current_user_from_token),
     sync_to_google: bool = Query(True, description="Sync to Google Calendar"),
     db=Depends(get_database)
 ):
@@ -439,7 +440,7 @@ async def delete_calendar_event(
 
 @router.get("/upcoming")
 async def get_upcoming_events(
-    user_id: str = Query(..., description="User ID"),
+    user_id: str = Depends(get_current_user_from_token),
     hours: int = Query(24, description="Hours ahead to look"),
     event_type: Optional[str] = Query(None, description="Filter by event type"),
     db=Depends(get_database)
@@ -489,7 +490,7 @@ async def get_upcoming_events(
 async def check_time_availability(
     start_time: str = Query(..., description="Start time (ISO format)"),
     end_time: str = Query(..., description="End time (ISO format)"),
-    user_id: str = Query(..., description="User ID"),
+    user_id: str = Depends(get_current_user_from_token),
     buffer_minutes: int = Query(15, description="Buffer time in minutes"),
     db=Depends(get_database)
 ):
@@ -539,7 +540,7 @@ async def check_time_availability(
 
 @router.get("/insights/productivity")
 async def get_productivity_insights(
-    user_id: str = Query(..., description="User ID"),
+    user_id: str = Depends(get_current_user_from_token),
     days_back: int = Query(7, description="Number of days to analyze"),
     db=Depends(get_database)
 ):

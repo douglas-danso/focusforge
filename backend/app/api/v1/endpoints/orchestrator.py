@@ -27,6 +27,7 @@ from app.models.api_schemas import (
     QueueEventRequest, QueueEventResponse,
     ProcessingMode, create_error_response, validate_user_id
 )
+from app.core.auth import get_current_user_from_token
 
 router = APIRouter()
 
@@ -133,7 +134,7 @@ async def complete_task_enhanced(
 @router.post("/daily-optimization", response_model=Dict[str, Any])
 async def daily_optimization(
     optimization_data: Dict[str, Any],
-    user_id: str = "default",  # TODO: Get from auth
+    user_id: str = Depends(get_current_user_from_token),
     use_background: bool = True
 ):
     """
@@ -334,7 +335,7 @@ async def get_action_status(action_id: str):
 async def execute_chain(
     chain_name: str,
     chain_input: Dict[str, Any],
-    user_id: str = "default",
+    user_id: str = Depends(get_current_user_from_token),
     use_cache: bool = True
 ):
     """Execute a specific chain directly"""

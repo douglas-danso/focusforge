@@ -1,31 +1,18 @@
-from fastapi import APIRouter, HTTPException, Depends, Query, Header
+from fastapi import APIRouter, HTTPException, Depends, Query
 from typing import List, Optional, Dict, Any
 from app.models.schemas import TaskCreate, TaskUpdate, Task, TaskStatus
 from app.services.task_service import TaskService
 from app.services.llm_service import LLMService
 from app.core.database import get_database
+from app.core.auth import get_current_user_from_token
 
 router = APIRouter()
-
-async def get_current_user_id(authorization: str = Header(None)) -> str:
-    """Extract user ID from authorization header"""
-    if not authorization:
-        raise HTTPException(status_code=401, detail="Authorization header required")
-    
-    # TODO: Implement proper JWT token validation
-    # For now, assume the header contains the user ID directly
-    # In production, this should validate JWT tokens
-    user_id = authorization.replace("Bearer ", "").strip()
-    if not user_id:
-        raise HTTPException(status_code=401, detail="Invalid authorization token")
-    
-    return user_id
 
 @router.post("/", response_model=Dict[str, Any])
 async def create_task(
     task: TaskCreate,
     auto_breakdown: bool = Query(True, description="Auto-breakdown task using AI agents"),
-    user_id: str = Depends(get_current_user_id),
+    user_id: str = Depends(get_current_user_from_token),
     db=Depends(get_database)
 ):
     """Create a new task with comprehensive AI agent guidance"""
@@ -42,7 +29,7 @@ async def create_task(
 
 @router.get("/", response_model=Dict[str, Any])
 async def get_tasks(
-    user_id: str = Depends(get_current_user_id),
+    user_id: str = Depends(get_current_user_from_token),
     status: Optional[TaskStatus] = None,
     category: Optional[str] = None,
     include_blocks: bool = False,
@@ -61,7 +48,7 @@ async def get_tasks(
 
 @router.get("/dashboard", response_model=Dict[str, Any])
 async def get_dashboard(
-    user_id: str = Depends(get_current_user_id),
+    user_id: str = Depends(get_current_user_from_token),
     db=Depends(get_database)
 ):
     """Get user dashboard with comprehensive data"""
@@ -76,7 +63,7 @@ async def get_dashboard(
 async def get_task(
     task_id: str,
     include_blocks: bool = True,
-    user_id: str = Depends(get_current_user_id),
+    user_id: str = Depends(get_current_user_from_token),
     db=Depends(get_database)
 ):
     """Get a specific task with optional blocks"""
@@ -96,7 +83,7 @@ async def get_task(
 @router.get("/{task_id}/guidance", response_model=Dict[str, Any])
 async def get_task_guidance(
     task_id: str,
-    user_id: str = "default",  # TODO: Get from auth
+    user_id: str = Depends(get_current_user_from_token),
     db=Depends(get_database)
 ):
     """Get comprehensive AI guidance for a specific task"""
@@ -111,7 +98,7 @@ async def get_task_guidance(
 async def start_task_block(
     task_id: str,
     block_id: str,
-    user_id: str = Depends(get_current_user_id),
+    user_id: str = Depends(get_current_user_from_token),
     db=Depends(get_database)
 ):
     """Start working on a specific task block"""
@@ -133,7 +120,7 @@ async def complete_task_block(
     task_id: str,
     block_id: str,
     proof_data: Optional[Dict[str, Any]] = None,
-    user_id: str = Depends(get_current_user_id),
+    user_id: str = Depends(get_current_user_from_token),
     db=Depends(get_database)
 ):
     """Complete a task block with optional proof"""
@@ -153,7 +140,7 @@ async def complete_task_block(
 @router.post("/{task_id}/regenerate-blocks", response_model=Dict[str, Any])
 async def regenerate_blocks(
     task_id: str,
-    user_id: str = "default",  # TODO: Get from auth
+    user_id: str = Depends(get_current_user_from_token),
     db=Depends(get_database)
 ):
     """Regenerate task blocks using updated task information"""
@@ -167,7 +154,7 @@ async def regenerate_blocks(
 @router.get("/motivation/support", response_model=Dict[str, Any])
 async def get_motivational_support(
     challenge: str = Query("", description="Current challenge or obstacle"),
-    user_id: str = Depends(get_current_user_id),
+    user_id: str = Depends(get_current_user_from_token),
     db=Depends(get_database)
 ):
     """Get motivational support from AI agents"""
@@ -181,7 +168,7 @@ async def get_motivational_support(
 @router.get("/rituals/suggest", response_model=Dict[str, Any])
 async def suggest_ritual(
     task_type: str = Query("general", description="Type of task to prepare for"),
-    user_id: str = Depends(get_current_user_id),
+    user_id: str = Depends(get_current_user_from_token),
     db=Depends(get_database)
 ):
     """Get personalized productivity ritual suggestion"""
@@ -196,7 +183,7 @@ async def suggest_ritual(
 async def update_task(
     task_id: str,
     task_update: TaskUpdate,
-    user_id: str = Depends(get_current_user_id),
+    user_id: str = Depends(get_current_user_from_token),
     db=Depends(get_database)
 ):
     """Update a task"""
@@ -216,7 +203,7 @@ async def update_task(
 @router.delete("/{task_id}", response_model=Dict[str, Any])
 async def delete_task(
     task_id: str,
-    user_id: str = Depends(get_current_user_id),
+    user_id: str = Depends(get_current_user_from_token),
     db=Depends(get_database)
 ):
     """Delete a task"""

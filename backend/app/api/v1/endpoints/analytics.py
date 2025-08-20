@@ -2,12 +2,13 @@ from fastapi import APIRouter, HTTPException, Depends
 from app.models.schemas import AnalyticsResponse
 from app.services.analytics_service import AnalyticsService
 from app.core.database import get_database
+from app.core.auth import get_current_user_from_token
 
 router = APIRouter()
 
 @router.get("/", response_model=AnalyticsResponse)
 async def get_analytics(
-    user_id: str = "default",  # TODO: Get from auth
+    user_id: str = Depends(get_current_user_from_token),
     db=Depends(get_database)
 ):
     """Get comprehensive analytics for a user"""
@@ -20,7 +21,7 @@ async def get_analytics(
 
 @router.get("/streak")
 async def get_streak(
-    user_id: str = "default",  # TODO: Get from auth
+    user_id: str = Depends(get_current_user_from_token),
     db=Depends(get_database)
 ):
     """Get current streak for a user"""
@@ -33,7 +34,7 @@ async def get_streak(
 
 @router.get("/weekly")
 async def get_weekly_stats(
-    user_id: str = "default",  # TODO: Get from auth
+    user_id: str = Depends(get_current_user_from_token),
     db=Depends(get_database)
 ):
     """Get weekly statistics"""
@@ -46,7 +47,7 @@ async def get_weekly_stats(
 
 @router.get("/monthly")
 async def get_monthly_stats(
-    user_id: str = "default",  # TODO: Get from auth
+    user_id: str = Depends(get_current_user_from_token),
     db=Depends(get_database)
 ):
     """Get monthly statistics"""
