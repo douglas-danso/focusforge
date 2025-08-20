@@ -24,6 +24,20 @@ class Settings(BaseSettings):
     SPOTIPY_CLIENT_SECRET: str = os.getenv("SPOTIPY_CLIENT_SECRET", "")
     SPOTIPY_REDIRECT_URI: str = os.getenv("SPOTIPY_REDIRECT_URI", "http://localhost:3000/callback")
     
+    # Google Calendar settings
+    GOOGLE_CLIENT_ID: str = os.getenv("GOOGLE_CLIENT_ID", "")
+    GOOGLE_CLIENT_SECRET: str = os.getenv("GOOGLE_CLIENT_SECRET", "")
+    GOOGLE_REDIRECT_URI: str = os.getenv("GOOGLE_REDIRECT_URI", "http://localhost:8000/auth/google/callback")
+    GOOGLE_CREDENTIALS_DIR: str = os.getenv("GOOGLE_CREDENTIALS_DIR", "./credentials")
+    
+    # File upload settings
+    UPLOAD_DIR: str = os.getenv("UPLOAD_DIR", "./uploads")
+    MAX_FILE_SIZE_MB: int = int(os.getenv("MAX_FILE_SIZE_MB", "10"))
+    BASE_URL: str = os.getenv("BASE_URL", "http://localhost:8000")
+    
+    # Enhanced features settings
+    TIMEZONE: str = os.getenv("TIMEZONE", "UTC")
+    
     # CORS settings
     BACKEND_CORS_ORIGINS: List[str] = [
         "http://localhost:3000",  # React dev server

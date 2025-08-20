@@ -8,6 +8,7 @@ from app.core.unified_mcp import unified_mcp
 from app.core.orchestrator import mcp_orchestrator
 from app.core.memory import memory_manager
 from app.core.background_tasks import task_scheduler
+from app.core.vector_store import vector_store
 import logging
 
 # Configure logging
@@ -30,6 +31,13 @@ async def startup_event():
     # Connect to MongoDB
     await connect_to_mongo()
     logging.info("MongoDB connection established")
+    
+    # Initialize vector store for semantic memory
+    try:
+        await vector_store.initialize()
+        logging.info("Vector store initialized successfully")
+    except Exception as e:
+        logging.error(f"Failed to initialize vector store: {e}")
     
     # Initialize Memory-Chain-Planner Orchestrator (which initializes everything)
     try:
@@ -122,9 +130,13 @@ async def health_check():
         # Get comprehensive system status from orchestrator
         system_status = await mcp_orchestrator.get_system_status()
         
+        # Get vector store status
+        vector_store_status = await vector_store.get_statistics()
+        
         overall_health = (
             system_status.get("orchestrator_initialized", False) and
-            system_status.get("mcp_system", {}).get("initialized", False)
+            system_status.get("mcp_system", {}).get("initialized", False) and
+            vector_store_status.get("is_initialized", False)
         )
         
         return {
@@ -137,11 +149,13 @@ async def health_check():
                 "orchestrator": "healthy" if system_status.get("orchestrator_initialized") else "unhealthy",
                 "memory_system": "healthy" if system_status.get("memory_system") else "degraded",
                 "mcp_system": "healthy" if system_status.get("mcp_system", {}).get("initialized") else "unhealthy",
+                "vector_store": "healthy" if vector_store_status.get("is_initialized") else "unhealthy",
                 "background_processing": "healthy" if system_status.get("background_processing") else "degraded",
                 "database": "healthy",  # Assuming healthy if we reach this point
                 "tools_available": system_status.get("mcp_system", {}).get("tools_count", 0),
                 "active_actions": system_status.get("active_actions", 0),
-                "background_tasks": system_status.get("background_tasks", 0)
+                "background_tasks": system_status.get("background_tasks", 0),
+                "vector_embeddings": vector_store_status.get("total_vectors", 0)
             }
         }
     except Exception as e:

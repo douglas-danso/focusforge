@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field, validator
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 from enum import Enum
+import uuid
 
 # Your existing schemas (keeping them as-is)
 class UserBase(BaseModel):
@@ -513,3 +514,185 @@ class AgentResponse(BaseModel):
     success: bool
     timestamp: datetime = Field(default_factory=datetime.now)
     error: Optional[str] = None
+
+
+# ===== CUSTOM RITUAL SCHEMAS =====
+
+class RitualStepType(str, Enum):
+    ENVIRONMENT_SETUP = "environment_setup"
+    BREATHING_EXERCISE = "breathing_exercise"
+    MEDITATION = "meditation"
+    SPOTIFY_PLAYLIST = "spotify_playlist"
+    INTENTION_SETTING = "intention_setting"
+    CUSTOM_ACTION = "custom_action"
+
+class RitualStep(BaseModel):
+    step_type: RitualStepType
+    title: str = Field(..., min_length=1, max_length=100)
+    description: str = Field(..., min_length=1, max_length=500)
+    duration_seconds: int = Field(..., ge=10, le=1800)  # 10 seconds to 30 minutes
+    
+    # Spotify integration
+    spotify_playlist_id: Optional[str] = None
+    spotify_search_query: Optional[str] = None
+    
+    # Meditation options
+    meditation_type: Optional[str] = Field(None, regex="^(breathing|body_scan|mindfulness|focus)$")
+    meditation_voice: Optional[str] = Field(None, regex="^(calm_female|calm_male|energetic_female|energetic_male)$")
+    meditation_background: Optional[str] = Field(None, regex="^(nature|rain|ocean|birds|silence)$")
+    
+    # Breathing exercise options
+    breathing_pattern: Optional[str] = Field(None, regex="^(4-4-4-4|4-7-8|breath_of_fire|4-4-6-2)$")
+    
+    # Environment setup
+    setup_instructions: Optional[List[str]] = None
+    
+    # Custom action
+    custom_instructions: Optional[str] = None
+    
+    @validator('spotify_playlist_id', 'spotify_search_query')
+    def validate_spotify_fields(cls, v, values):
+        if values.get('step_type') == RitualStepType.SPOTIFY_PLAYLIST:
+            if not v and not values.get('spotify_playlist_id') and not values.get('spotify_search_query'):
+                raise ValueError('Either spotify_playlist_id or spotify_search_query required for Spotify steps')
+        return v
+    
+    @validator('custom_instructions')
+    def validate_custom_instructions(cls, v, values):
+        if values.get('step_type') == RitualStepType.CUSTOM_ACTION and not v:
+            raise ValueError('custom_instructions required for custom action steps')
+        return v
+
+class RitualCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100)
+    description: str = Field(..., min_length=1, max_length=1000)
+    category: str = Field(..., regex="^(deep_work|energy|calm|creative|study|presentation|custom)$")
+    estimated_duration_minutes: int = Field(..., ge=1, le=60)
+    steps: List[RitualStep] = Field(..., min_items=1, max_items=10)
+    tags: List[str] = Field(default_factory=list, max_items=10)
+    is_public: bool = Field(default=False)
+    
+    @validator('steps')
+    def validate_steps(cls, v):
+        if len(v) == 0:
+            raise ValueError('At least one step is required')
+        
+        total_duration = sum(step.duration_seconds for step in v)
+        if total_duration > 3600:  # Max 1 hour
+            raise ValueError('Total ritual duration cannot exceed 1 hour')
+        
+        return v
+
+class Ritual(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    name: str
+    description: str
+    category: str
+    estimated_duration_minutes: int
+    steps: List[RitualStep]
+    tags: List[str]
+    is_public: bool
+    usage_count: int = 0
+    effectiveness_ratings: List[int] = Field(default_factory=list)
+    created_at: datetime
+    updated_at: datetime
+    is_active: bool = True
+    
+    class Config:
+        populate_by_name = True
+
+# ===== MEDITATION SCHEMAS =====
+
+class MeditationType(str, Enum):
+    BREATHING = "breathing"
+    BODY_SCAN = "body_scan"
+    MINDFULNESS = "mindfulness"
+    FOCUS = "focus"
+
+class MeditationSessionCreate(BaseModel):
+    type: MeditationType = MeditationType.BREATHING
+    duration_minutes: int = Field(5, ge=1, le=60)
+    guidance_voice: str = Field("calm_female", regex="^(calm_female|calm_male|energetic_female|energetic_male)$")
+    background_sound: str = Field("nature", regex="^(nature|rain|ocean|birds|silence)$")
+    mood_before: Optional[str] = None
+
+class MeditationSession(BaseModel):
+    id: str = Field(alias="_id")
+    user_id: str
+    type: str
+    duration_minutes: int
+    guidance_voice: str
+    background_sound: str
+    started_at: datetime
+    completed: bool = False
+    completed_at: Optional[datetime] = None
+    session_notes: str = ""
+    mood_before: str = ""
+    mood_after: str = ""
+    effectiveness_rating: Optional[int] = None
+    
+    class Config:
+        populate_by_name = True
+
+# ===== ENHANCED PROOF SUBMISSION SCHEMAS =====
+
+class ProofType(str, Enum):
+    TEXT = "text"
+    IMAGE = "image"
+    FILE = "file"
+    LINK = "link"
+    VIDEO = "video"
+
+class ProofSubmission(BaseModel):
+    proof_type: ProofType
+    content: str  # Text content, file path, or URL
+    description: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
+
+class EnhancedTaskCompletion(BaseModel):
+    task_id: str
+    block_id: Optional[str] = None
+    completion_note: Optional[str] = None
+    proofs: List[ProofSubmission] = Field(default_factory=list)
+    completion_confidence: int = Field(5, ge=1, le=10)  # Self-assessment
+    time_spent_minutes: Optional[int] = None
+    challenges_faced: Optional[List[str]] = None
+    lessons_learned: Optional[str] = None
+
+# ===== CALENDAR ENHANCEMENT SCHEMAS =====
+
+class CalendarEventCreate(BaseModel):
+    title: str = Field(..., min_length=1, max_length=200)
+    description: Optional[str] = Field("", max_length=2000)
+    start_time: datetime
+    end_time: datetime
+    location: Optional[str] = Field(None, max_length=200)
+    all_day: bool = False
+    recurring: bool = False
+    reminder_minutes: int = Field(15, ge=0, le=10080)  # Max 1 week
+    
+    @validator('end_time')
+    def validate_end_time(cls, v, values):
+        if 'start_time' in values and v <= values['start_time']:
+            raise ValueError('End time must be after start time')
+        return v
+
+class CalendarEvent(BaseModel):
+    id: str = Field(alias="_id")
+    user_id: str
+    title: str
+    description: str
+    start_time: datetime
+    end_time: datetime
+    location: Optional[str] = None
+    all_day: bool
+    recurring: bool
+    reminder_minutes: int
+    created_at: datetime
+    updated_at: datetime
+    google_event_id: Optional[str] = None
+    synced_to_google: bool = False
+    
+    class Config:
+        populate_by_name = True

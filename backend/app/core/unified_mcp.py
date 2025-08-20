@@ -18,6 +18,7 @@ from app.services.store_service import StoreService
 from app.services.spotify_service import SpotifyService
 from app.services.analytics_service import AnalyticsService
 from app.services.llm_service import LLMService
+from app.services.calendar_service import calendar_service
 from app.core.database import get_database
 from app.core.memory import memory_manager
 
@@ -812,33 +813,21 @@ class UnifiedMCPSystem:
     async def _handle_add_calendar_event(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """Handle calendar event creation"""
         try:
-            # For now, create a simple event record in memory
-            # TODO: Integrate with real calendar service (Google Calendar, etc.)
-            event_id = f"cal_event_{datetime.now().timestamp()}"
-            
-            # Store event in memory for now
-            await memory_manager.memory_store.store_memory(
-                "working",
-                f"calendar_event:{event_id}",
-                {
-                    "title": params["title"],
-                    "start_time": params["start_time"],
-                    "end_time": params["end_time"],
-                    "user_id": params["user_id"],
-                    "metadata": params.get("metadata", {}),
-                    "created_at": datetime.now().isoformat()
-                },
-                params["user_id"]
-            )
+            # Use the real calendar service
+            event = await calendar_service.create_event(params, params["user_id"])
             
             return {
                 "success": True,
-                "event_id": event_id,
-                "title": params["title"],
-                "start_time": params["start_time"],
-                "end_time": params["end_time"],
-                "user_id": params["user_id"],
-                "note": "Event stored in memory (calendar integration pending)"
+                "event_id": event.id,
+                "title": event.title,
+                "start_time": event.start_time.isoformat(),
+                "end_time": event.end_time.isoformat(),
+                "user_id": event.user_id,
+                "calendar_id": event.calendar_id,
+                "location": event.location,
+                "attendees": event.attendees,
+                "reminders": event.reminders,
+                "metadata": event.metadata
             }
             
         except Exception as e:

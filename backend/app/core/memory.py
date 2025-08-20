@@ -17,6 +17,7 @@ from langchain_core.messages.utils import get_buffer_string
 
 from app.core.database import get_database
 from app.core.config import settings
+from app.core.vector_store import vector_store
 
 logger = logging.getLogger(__name__)
 
@@ -330,13 +331,47 @@ class MemoryManager:
         return insights or {}
     
     async def search_similar_tasks(self, user_id: str, task_description: str, limit: int = 5) -> List[Dict]:
-        """Search for similar past tasks"""
-        # Simple text matching for now (can be enhanced with semantic search)
-        query = {
-            "key": {"$regex": "task_insights:.*", "$options": "i"},
-            "value.description": {"$regex": task_description, "$options": "i"}
-        }
-        return await self.memory_store.search_memories(MemoryType.LONG_TERM, query, user_id, limit)
+        """Search for similar past tasks using semantic search"""
+        try:
+            # Use vector store for semantic search
+            similar_results = await vector_store.search_similar(
+                query=task_description,
+                k=limit,
+                user_id=user_id,
+                metadata_filter={"type": "task_insights"}
+            )
+            
+            # Convert to expected format
+            results = []
+            for result in similar_results:
+                results.append({
+                    "key": f"semantic_search_{result['index']}",
+                    "value": result["metadata"],
+                    "score": result["score"]
+                })
+            
+            # Fallback to text-based search if vector search fails
+            if not results:
+                query = {
+                    "key": {"$regex": "task_insights:.*", "$options": "i"},
+                    "value.description": {"$regex": task_description, "$options": "i"}
+                }
+                results = await self.memory_store.search_memories(
+                    MemoryType.LONG_TERM, query, user_id, limit
+                )
+            
+            return results
+            
+        except Exception as e:
+            logger.warning(f"Semantic search failed, falling back to text search: {e}")
+            # Fallback to text-based search
+            query = {
+                "key": {"$regex": "task_insights:.*", "$options": "i"},
+                "value.description": {"$regex": task_description, "$options": "i"}
+            }
+            return await self.memory_store.search_memories(
+                MemoryType.LONG_TERM, query, user_id, limit
+            )
     
     async def cleanup_all_memories(self):
         """Run cleanup on all memory types"""

@@ -14,6 +14,9 @@ from app.core.chains import chain_executor
 from app.core.planner import action_planner, ActionType, ActionPriority
 from app.core.unified_mcp import unified_mcp
 from app.core.config import settings
+from app.services.calendar_service import CalendarService
+from app.services.ritual_service import RitualService
+from app.services.proof_service import ProofService
 
 logger = logging.getLogger(__name__)
 
@@ -456,6 +459,335 @@ class MCPOrchestrator:
                 "success": False,
                 "error": str(e)
             }
+    
+    # ===== ENHANCED FEATURE WORKFLOWS =====
+    
+    async def handle_enhanced_task_creation(self, user_id: str, task_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Enhanced task creation with calendar integration and custom rituals"""
+        try:
+            # 1. MEMORY: Retrieve enhanced user context
+            user_context = await memory_manager.memory_store.get_memories(
+                MemoryType.LONG_TERM, user_id, limit=10
+            )
+            
+            # 2. CHAIN: Enhanced task analysis with ritual suggestions
+            task_analysis = await chain_executor.run_chain(
+                "task_analysis",
+                {
+                    **task_data,
+                    "user_context": user_context,
+                    "request_ritual_suggestions": True
+                }
+            )
+            
+            # 3. MCP: Create task with enhanced breakdown
+            task_result = await unified_mcp.call_tool(
+                "create_task_enhanced",
+                {
+                    **task_data,
+                    "user_id": user_id,
+                    "analysis_results": task_analysis.get("output", {})
+                }
+            )
+            
+            # 4. CALENDAR: Auto-schedule task blocks to calendar
+            calendar_result = None
+            if task_result.get("success") and task_result.get("task"):
+                calendar_service = CalendarService()
+                await calendar_service.initialize()
+                
+                task = task_result["task"]
+                blocks = task_result.get("blocks", [])
+                
+                if blocks:
+                    calendar_events = await calendar_service.create_task_calendar_events(
+                        user_id, task["id"], task["title"], blocks
+                    )
+                    calendar_result = {
+                        "success": True,
+                        "events_created": len(calendar_events),
+                        "calendar_events": calendar_events
+                    }
+            
+            # 5. PLANNER: Schedule follow-up actions
+            await action_planner.plan_action(
+                user_id=user_id,
+                action_type=ActionType.SEND_REMINDER,
+                priority=ActionPriority.MEDIUM,
+                scheduled_for=datetime.now() + timedelta(hours=1),
+                parameters={
+                    "task_id": task_result.get("task", {}).get("id"),
+                    "reminder_type": "task_start_reminder",
+                    "message": "Don't forget to start your scheduled task!"
+                }
+            )
+            
+            # 6. MEMORY: Store enhanced task creation context
+            await memory_manager.memory_store.store_memory(
+                MemoryType.LONG_TERM,
+                f"enhanced_task_created:{task_result.get('task', {}).get('id')}",
+                {
+                    "task_data": task_data,
+                    "analysis_results": task_analysis.get("output", {}),
+                    "calendar_integration": calendar_result,
+                    "creation_timestamp": datetime.now().isoformat()
+                },
+                user_id
+            )
+            
+            return {
+                "success": True,
+                "task": task_result.get("task"),
+                "analysis": task_analysis.get("output", {}),
+                "calendar_integration": calendar_result,
+                "blocks_created": len(task_result.get("blocks", [])),
+                "calendar_events_created": calendar_result.get("events_created", 0) if calendar_result else 0,
+                "follow_up_actions_scheduled": 1
+            }
+        except Exception as e:
+            logger.error(f"Enhanced task creation failed: {e}")
+            return {"success": False, "error": str(e)}
+    
+    async def handle_custom_ritual_execution(self, user_id: str, ritual_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute custom ritual with full orchestration"""
+        try:
+            ritual_service = RitualService()
+            await ritual_service.initialize()
+            
+            # 1. MEMORY: Get user context for ritual personalization
+            user_context = await memory_manager.memory_store.get_memories(
+                MemoryType.WORKING, user_id, limit=5
+            )
+            
+            # 2. RITUAL: Start ritual execution
+            ritual_result = await ritual_service.execute_custom_ritual(
+                user_id, ritual_data.get("ritual_id"), {"user_context": user_context}
+            )
+            
+            if not ritual_result.get("success"):
+                return ritual_result
+            
+            # 3. PLANNER: Schedule ritual step advancement reminders
+            ritual_info = ritual_result.get("ritual", {})
+            total_steps = ritual_info.get("total_steps", 1)
+            
+            for step_num in range(1, total_steps):
+                await action_planner.plan_action(
+                    user_id=user_id,
+                    action_type=ActionType.SEND_REMINDER,
+                    priority=ActionPriority.HIGH,
+                    scheduled_for=datetime.now() + timedelta(minutes=step_num * 2),
+                    parameters={
+                        "execution_id": ritual_result.get("execution_id"),
+                        "step_number": step_num,
+                        "reminder_type": "ritual_step_advance",
+                        "message": f"Ready for ritual step {step_num + 1}?"
+                    }
+                )
+            
+            # 4. MEMORY: Store ritual execution context
+            await memory_manager.memory_store.store_memory(
+                MemoryType.WORKING,
+                f"ritual_execution:{ritual_result.get('execution_id')}",
+                {
+                    "ritual_data": ritual_data,
+                    "execution_start": datetime.now().isoformat(),
+                    "ritual_info": ritual_info,
+                    "user_context": user_context
+                },
+                user_id
+            )
+            
+            return {
+                **ritual_result,
+                "orchestration_enhanced": True,
+                "step_reminders_scheduled": total_steps - 1,
+                "context_stored": True
+            }
+        except Exception as e:
+            logger.error(f"Custom ritual execution failed: {e}")
+            return {"success": False, "error": str(e)}
+    
+    async def handle_enhanced_proof_submission(self, user_id: str, proof_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Handle enhanced proof submission with AI validation and rewards"""
+        try:
+            proof_service = ProofService()
+            await proof_service.initialize()
+            
+            # 1. MEMORY: Get task context for better validation
+            task_context = await memory_manager.memory_store.get_memories(
+                MemoryType.WORKING, user_id, 
+                filter_dict={"task_id": proof_data.get("task_id")}
+            )
+            
+            # 2. PROOF: Submit and validate proof
+            from app.models.schemas import EnhancedTaskCompletion
+            completion_data = EnhancedTaskCompletion(**proof_data)
+            
+            proof_result = await proof_service.submit_enhanced_proof(
+                user_id, completion_data, proof_data.get("files", [])
+            )
+            
+            if not proof_result.get("success"):
+                return proof_result
+            
+            # 3. MCP: Award points based on validation score
+            validation_score = proof_result.get("validation", {}).get("overall_score", 5)
+            points_multiplier = max(0.5, validation_score / 10)  # 0.5x to 1.0x multiplier
+            
+            base_points = 100  # Base points for task completion
+            earned_points = int(base_points * points_multiplier)
+            
+            points_result = await unified_mcp.call_tool(
+                "award_points",
+                {
+                    "user_id": user_id,
+                    "amount": earned_points,
+                    "source": "enhanced_proof_submission",
+                    "task_id": proof_data.get("task_id"),
+                    "validation_score": validation_score
+                }
+            )
+            
+            # 4. CHAIN: Generate personalized feedback
+            feedback_result = await chain_executor.run_chain(
+                "motivation",
+                {
+                    "mood": "accomplished",
+                    "challenge": "task_completion",
+                    "accomplishments": [f"Completed task with {validation_score}/10 validation score"],
+                    "user_context": task_context
+                }
+            )
+            
+            # 5. PLANNER: Schedule follow-up actions based on performance
+            if validation_score >= 8.0:
+                # High performance - suggest challenging next task
+                await action_planner.plan_action(
+                    user_id=user_id,
+                    action_type=ActionType.SEND_REMINDER,
+                    priority=ActionPriority.MEDIUM,
+                    scheduled_for=datetime.now() + timedelta(minutes=30),
+                    parameters={
+                        "message": "🌟 Excellent work! Ready for your next challenge?",
+                        "action_type": "suggest_next_task",
+                        "difficulty_boost": True
+                    }
+                )
+            elif validation_score < 5.0:
+                # Lower performance - offer support
+                await action_planner.plan_action(
+                    user_id=user_id,
+                    action_type=ActionType.SEND_REMINDER,
+                    priority=ActionPriority.HIGH,
+                    scheduled_for=datetime.now() + timedelta(minutes=15),
+                    parameters={
+                        "message": "💪 Need help improving your proof submissions? We're here to help!",
+                        "action_type": "offer_guidance",
+                        "guidance_type": "proof_improvement"
+                    }
+                )
+            
+            # 6. MEMORY: Store comprehensive completion record
+            await memory_manager.memory_store.store_memory(
+                MemoryType.LONG_TERM,
+                f"enhanced_completion:{proof_data.get('task_id')}",
+                {
+                    "proof_data": proof_data,
+                    "validation_result": proof_result.get("validation", {}),
+                    "points_earned": earned_points,
+                    "feedback": feedback_result.get("output", {}),
+                    "completion_timestamp": datetime.now().isoformat()
+                },
+                user_id
+            )
+            
+            return {
+                **proof_result,
+                "points_awarded": earned_points,
+                "personalized_feedback": feedback_result.get("output", {}),
+                "follow_up_actions_scheduled": 1,
+                "performance_level": (
+                    "excellent" if validation_score >= 8.0 else
+                    "good" if validation_score >= 6.0 else
+                    "needs_improvement"
+                )
+            }
+        except Exception as e:
+            logger.error(f"Enhanced proof submission failed: {e}")
+            return {"success": False, "error": str(e)}
+    
+    async def handle_calendar_task_optimization(self, user_id: str, optimization_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Optimize task scheduling based on calendar availability and productivity patterns"""
+        try:
+            calendar_service = CalendarService()
+            await calendar_service.initialize()
+            
+            # 1. MEMORY: Get productivity patterns
+            productivity_memories = await memory_manager.memory_store.get_memories(
+                MemoryType.LONG_TERM, user_id,
+                filter_dict={"type": "productivity_pattern"}
+            )
+            
+            # 2. CALENDAR: Get calendar view and availability
+            calendar_view = await calendar_service.get_calendar_view(
+                user_id, optimization_data.get("view_type", "week")
+            )
+            
+            # 3. CHAIN: Analyze optimal scheduling
+            optimization_result = await chain_executor.run_chain(
+                "task_analysis",
+                {
+                    "calendar_data": calendar_view,
+                    "productivity_patterns": productivity_memories,
+                    "user_preferences": optimization_data.get("preferences", {}),
+                    "task_priorities": optimization_data.get("task_priorities", [])
+                }
+            )
+            
+            # 4. PLANNER: Create optimized task schedule
+            optimized_schedule = []
+            recommendations = optimization_result.get("output", {}).get("scheduling_recommendations", [])
+            
+            for recommendation in recommendations[:5]:  # Limit to top 5
+                await action_planner.plan_action(
+                    user_id=user_id,
+                    action_type=ActionType.SCHEDULE_TASK,
+                    priority=ActionPriority.MEDIUM,
+                    scheduled_for=datetime.fromisoformat(recommendation.get("suggested_time")),
+                    parameters={
+                        "task_data": recommendation.get("task_data", {}),
+                        "optimization_reason": recommendation.get("reason", ""),
+                        "estimated_duration": recommendation.get("duration_minutes", 25)
+                    }
+                )
+                optimized_schedule.append(recommendation)
+            
+            # 5. MEMORY: Store optimization insights
+            await memory_manager.memory_store.store_memory(
+                MemoryType.LONG_TERM,
+                f"calendar_optimization:{datetime.now().date()}",
+                {
+                    "optimization_data": optimization_data,
+                    "calendar_analysis": calendar_view,
+                    "recommendations": recommendations,
+                    "scheduled_tasks": len(optimized_schedule),
+                    "optimization_timestamp": datetime.now().isoformat()
+                },
+                user_id
+            )
+            
+            return {
+                "success": True,
+                "calendar_analysis": calendar_view,
+                "optimization_insights": optimization_result.get("output", {}),
+                "scheduled_tasks": len(optimized_schedule),
+                "recommendations": recommendations,
+                "next_optimal_slot": recommendations[0] if recommendations else None
+            }
+        except Exception as e:
+            logger.error(f"Calendar task optimization failed: {e}")
+            return {"success": False, "error": str(e)}
     
     # ===== BACKGROUND PROCESSING =====
     
