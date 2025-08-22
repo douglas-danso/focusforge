@@ -102,5 +102,4 @@ async def close_mongo_connection():
     await db_manager.close()
     db.client = None
     db.database = None
-    await db_manager.close()
-        print("Disconnected from MongoDB")
+    print("Disconnected from MongoDB")

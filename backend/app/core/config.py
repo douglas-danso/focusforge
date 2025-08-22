@@ -8,11 +8,11 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8  # 8 days
     
     # Database settings
-    MONGODB_URI: str = os.getenv("MONGODB_URI", "mongodb://mongo:27017")
+    MONGODB_URI: str = os.getenv("MONGODB_URI", "mongodb://mongo-primary:27017")
     DATABASE_NAME: str = os.getenv("DATABASE_NAME", "focusforge")
     
     # Redis settings
-    REDIS_URL: str = os.getenv("REDIS_URL", "redis://redis:6379")
+    REDIS_URL: str = os.getenv("REDIS_URL", "redis://redis-master:6379")
 
     # External API settings
     OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")

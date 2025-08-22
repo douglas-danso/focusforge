@@ -3,6 +3,7 @@ Distributed caching system using Redis with fallback to local cache.
 Provides high-performance caching with automatic serialization and TTL management.
 """
 
+from backend.app.core.config import settings
 import redis.asyncio as redis
 import json
 import pickle
@@ -71,7 +72,7 @@ class LocalCache:
 class DistributedCache:
     """Redis-based distributed cache with local cache fallback"""
     
-    def __init__(self, redis_url: str = "redis://redis:6379", db: int = 1, max_connections: int = 20):
+    def __init__(self, redis_url: str = settings.REDIS_URL, db: int = 1, max_connections: int = 20):
         self.redis_url = redis_url
         self.db = db
         self.max_connections = max_connections
@@ -91,7 +92,7 @@ class DistributedCache:
                 
             try:
                 self.redis_client = redis.Redis(
-                    host='redis', 
+                    host='redis-master',
                     port=6379, 
                     db=self.db,
                     decode_responses=False,  # For pickle support

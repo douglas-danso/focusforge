@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 # Redis connection
 try:
-    redis_conn = redis.Redis(host='redis', port=6379, db=0, decode_responses=True)
+    redis_conn = redis.Redis(host='redis-master', port=6379, db=0, decode_responses=True)
     redis_conn.ping()  # Test connection
 except Exception as e:
     logger.warning(f"Redis not available, using in-memory fallback: {e}")
