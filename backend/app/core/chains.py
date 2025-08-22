@@ -528,9 +528,9 @@ class ProofValidationChain(BaseTaskChain):
         }
 
 
-class ChainExecutor:
+class OptimizedChainExecutor:
     """
-    Central chain execution manager
+    Optimized chain execution manager with distributed caching and AI optimization
     Handles chain composition, caching, and error recovery
     """
     
@@ -541,18 +541,42 @@ class ChainExecutor:
             "motivation": MotivationChain,
             "proof_validation": ProofValidationChain
         }
+        # Legacy in-memory cache for backward compatibility
         self.cache = {}
         self.cache_ttl = 1800  # 30 minutes
+        self.local_cache_size = 100
+        self._initialized = False
+        
+    async def initialize(self):
+        """Initialize distributed cache and AI optimizer"""
+        if not self._initialized:
+            from app.core.cache import distributed_cache
+            from app.core.ai_optimizer import ai_optimizer
+            
+            await distributed_cache.initialize()
+            await ai_optimizer.initialize()
+            self._initialized = True
+            logger.info("Optimized Chain Executor initialized")
     
     async def execute_chain(self, chain_name: str, inputs: Dict[str, Any], 
                            user_id: str = "default", use_cache: bool = True) -> Dict[str, Any]:
-        """Execute a specific chain with caching"""
+        """Execute a specific chain with optimized caching and AI processing"""
         
-        # Check cache
-        cache_key = f"{chain_name}:{user_id}:{hash(str(sorted(inputs.items())))}"
-        if use_cache and cache_key in self.cache:
-            cached_result, timestamp = self.cache[cache_key]
-            if (datetime.now().timestamp() - timestamp) < self.cache_ttl:
+        # Ensure initialization
+        if not self._initialized:
+            await self.initialize()
+        
+        from app.core.cache import distributed_cache, CacheKey
+        from app.core.ai_optimizer import ai_optimizer
+        
+        # Generate cache key
+        inputs_hash = CacheKey.hash_inputs(inputs)
+        cache_key = CacheKey.chain_result(chain_name, user_id, inputs_hash)
+        
+        # Check distributed cache first
+        if use_cache:
+            cached_result = await distributed_cache.get(cache_key)
+            if cached_result is not None:
                 logger.info(f"Returning cached result for {chain_name}")
                 return cached_result
         
@@ -564,11 +588,15 @@ class ChainExecutor:
         chain = chain_class(user_id=user_id)
         
         try:
-            result = await chain._acall(inputs)
+            # Execute chain with AI optimization
+            result = await ai_optimizer.execute_ai_request(chain._acall, inputs)
             
-            # Cache result
+            # Cache result in distributed cache
             if use_cache:
-                self.cache[cache_key] = (result, datetime.now().timestamp())
+                await distributed_cache.set(cache_key, result, ttl=self.cache_ttl)
+                
+                # Also store in local cache for hot data
+                self._store_local_cache(cache_key, result)
             
             return result
             
@@ -578,32 +606,107 @@ class ChainExecutor:
     
     async def execute_chain_sequence(self, chain_specs: List[Dict[str, Any]], 
                                    user_id: str = "default") -> List[Dict[str, Any]]:
-        """Execute a sequence of chains"""
+        """Execute a sequence of chains with optimized parallel processing where possible"""
         results = []
         
-        for spec in chain_specs:
-            chain_name = spec["chain"]
-            inputs = spec["inputs"]
-            
-            # Merge previous results if specified
-            if "merge_from" in spec:
-                merge_index = spec["merge_from"]
-                if 0 <= merge_index < len(results):
-                    inputs.update(results[merge_index].get("output", {}))
-            
-            result = await self.execute_chain(chain_name, inputs, user_id)
-            results.append(result)
+        # Identify chains that can be run in parallel (no dependencies)
+        parallel_groups = self._group_parallel_chains(chain_specs)
+        
+        for group in parallel_groups:
+            if len(group) == 1:
+                # Single chain
+                spec = group[0]
+                chain_name = spec["chain"]
+                inputs = spec["inputs"]
+                
+                # Merge previous results if specified
+                if "merge_from" in spec:
+                    merge_index = spec["merge_from"]
+                    if 0 <= merge_index < len(results):
+                        inputs.update(results[merge_index].get("output", {}))
+                
+                result = await self.execute_chain(chain_name, inputs, user_id)
+                results.append(result)
+            else:
+                # Parallel execution
+                tasks = []
+                for spec in group:
+                    chain_name = spec["chain"]
+                    inputs = spec["inputs"]
+                    
+                    # Merge previous results if specified
+                    if "merge_from" in spec:
+                        merge_index = spec["merge_from"]
+                        if 0 <= merge_index < len(results):
+                            inputs.update(results[merge_index].get("output", {}))
+                    
+                    task = self.execute_chain(chain_name, inputs, user_id)
+                    tasks.append(task)
+                
+                # Execute in parallel
+                parallel_results = await asyncio.gather(*tasks)
+                results.extend(parallel_results)
         
         return results
     
-    def clear_cache(self, chain_name: str = None, user_id: str = None):
-        """Clear chain cache"""
+    def _group_parallel_chains(self, chain_specs: List[Dict[str, Any]]) -> List[List[Dict[str, Any]]]:
+        """Group chains that can be executed in parallel"""
+        groups = []
+        current_group = []
+        
+        for spec in chain_specs:
+            if "merge_from" not in spec:
+                # No dependency, can potentially run in parallel
+                current_group.append(spec)
+            else:
+                # Has dependency, start new group
+                if current_group:
+                    groups.append(current_group)
+                    current_group = []
+                groups.append([spec])
+        
+        if current_group:
+            groups.append(current_group)
+        
+        return groups
+    
+    def _store_local_cache(self, key: str, value: Any):
+        """Store in local cache with LRU eviction"""
+        if len(self.cache) >= self.local_cache_size:
+            # Remove oldest entry
+            oldest_key = min(self.cache.keys(), 
+                           key=lambda k: self.cache[k][1] if isinstance(self.cache[k], tuple) else 0)
+            del self.cache[oldest_key]
+        
+        self.cache[key] = (value, datetime.now().timestamp())
+    
+    async def execute_parallel_chains(self, requests: List[Dict[str, Any]], user_id: str = "default") -> List[Dict[str, Any]]:
+        """Execute multiple independent chains in parallel"""
+        from app.core.ai_optimizer import ai_optimizer
+        
+        # Prepare AI requests for parallel execution
+        ai_requests = []
+        for req in requests:
+            ai_request = {
+                'func': self.execute_chain,
+                'args': (req['chain'], req['inputs']),
+                'kwargs': {'user_id': user_id, 'use_cache': req.get('use_cache', True)},
+                'priority': req.get('priority', 1)
+            }
+            ai_requests.append(ai_request)
+        
+        # Execute with AI optimizer
+        return await ai_optimizer.execute_parallel_ai_requests(ai_requests)
+    
+    async def clear_cache(self, chain_name: str = None, user_id: str = None):
+        """Clear chain cache (both local and distributed)"""
+        # Clear local cache
         if chain_name is None and user_id is None:
             self.cache.clear()
         else:
             keys_to_remove = []
             for key in self.cache.keys():
-                if chain_name and not key.startswith(f"{chain_name}:"):
+                if chain_name and not key.startswith(f"chain:{chain_name}:"):
                     continue
                 if user_id and f":{user_id}:" not in key:
                     continue
@@ -611,7 +714,58 @@ class ChainExecutor:
             
             for key in keys_to_remove:
                 del self.cache[key]
+        
+        # Clear distributed cache
+        if self._initialized:
+            from app.core.cache import distributed_cache
+            if chain_name or user_id:
+                pattern = f"chain:{chain_name or '*'}:{user_id or '*'}"
+                await distributed_cache.clear_pattern(pattern)
+            else:
+                await distributed_cache.clear_pattern("chain:")
+    
+    async def get_stats(self) -> Dict[str, Any]:
+        """Get chain executor statistics"""
+        stats = {
+            'local_cache_size': len(self.cache),
+            'initialized': self._initialized,
+            'available_chains': list(self.chains.keys())
+        }
+        
+        if self._initialized:
+            from app.core.cache import distributed_cache
+            from app.core.ai_optimizer import ai_optimizer
+            
+            cache_stats = await distributed_cache.get_stats()
+            ai_stats = ai_optimizer.get_stats()
+            
+            stats.update({
+                'distributed_cache': cache_stats,
+                'ai_optimizer': ai_stats
+            })
+        
+        return stats
+    
+    async def health_check(self) -> bool:
+        """Check chain executor health"""
+        try:
+            if not self._initialized:
+                await self.initialize()
+            
+            from app.core.cache import distributed_cache
+            from app.core.ai_optimizer import ai_optimizer
+            
+            cache_healthy = await distributed_cache.health_check()
+            
+            return cache_healthy  # AI optimizer doesn't have external dependencies
+        except Exception as e:
+            logger.error(f"Chain executor health check failed: {e}")
+            return False
 
+# Maintain backward compatibility with legacy ChainExecutor
+class ChainExecutor(OptimizedChainExecutor):
+    """Legacy ChainExecutor for backward compatibility"""
+    pass
 
-# Global chain executor instance
-chain_executor = ChainExecutor()
+# Global chain executor instance (now optimized)
+chain_executor = OptimizedChainExecutor()

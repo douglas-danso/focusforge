@@ -1,78 +1,373 @@
+
 services:
-  # Backend API - Standalone
-  backend:
+  # Load Balancer
+  nginx:
+    image: nginx:alpine
+    container_name: focusforge-loadbalancer
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/ssl:ro
+    depends_on:
+      - backend-1
+      - backend-2
+    networks:
+      - frontend-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Backend instances (horizontal scaling)
+  backend-1:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: focusforge-backend
-    ports:
-      - "8004:8000"
-    volumes:
-      - ./backend/app:/app/app
-      - ./backend/main.py:/app/main.py
-      - ./backend/.env:/app/.env
-      # Add Spotify data persistence
-      - spotify_data:/app/data
+    container_name: focusforge-backend-1
     environment:
+      - INSTANCE_ID=backend-1
+      - WORKER_PROCESSES=4
+      - MONGODB_URI=mongodb://mongo-primary:27017,mongo-secondary:27017/focusforge?replicaSet=rs0
+      - REDIS_URL=redis://redis-master:6379
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - SPOTIPY_CLIENT_ID=${SPOTIPY_CLIENT_ID}
       - SPOTIPY_CLIENT_SECRET=${SPOTIPY_CLIENT_SECRET}
-      - SPOTIPY_REDIRECT_URI=${SPOTIPY_REDIRECT_URI:-http://localhost:8080/callback}
-      # Add Spotify-specific environment variables
-      - SPOTIFY_CACHE_PATH=/app/data/.spotify_cache
-      - SPOTIFY_SCOPE=${SPOTIFY_SCOPE:-user-read-playback-state user-modify-playback-state playlist-read-private playlist-modify-public}
-      - MONGODB_URI=${MONGODB_URI:-mongodb://mongo:27017/focusforge}
-      - REDIS_URL=${REDIS_URL:-redis://redis:6379}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
       - DATABASE_NAME=${DATABASE_NAME:-focusforge}
       - CORS_ORIGINS=${CORS_ORIGINS:-*}
-      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-your-super-secret-jwt-key}
-      - API_V1_STR=/api/v1
+    volumes:
+      - backend-data-1:/app/data
+      - backend-logs-1:/app/logs
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+        reservations:
+          memory: 1G
+          cpus: '0.5'
     networks:
       - backend-network
+      - frontend-network
     depends_on:
-      - mongo
-      - redis
+      - mongo-primary
+      - redis-master
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 60s
 
-  # MongoDB Database - Backend Only
-  mongo:
+  backend-2:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: focusforge-backend-2
+    environment:
+      - INSTANCE_ID=backend-2
+      - WORKER_PROCESSES=4
+      - MONGODB_URI=mongodb://mongo-primary:27017,mongo-secondary:27017/focusforge?replicaSet=rs0
+      - REDIS_URL=redis://redis-master:6379
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - SPOTIPY_CLIENT_ID=${SPOTIPY_CLIENT_ID}
+      - SPOTIPY_CLIENT_SECRET=${SPOTIPY_CLIENT_SECRET}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - DATABASE_NAME=${DATABASE_NAME:-focusforge}
+      - CORS_ORIGINS=${CORS_ORIGINS:-*}
+    volumes:
+      - backend-data-2:/app/data
+      - backend-logs-2:/app/logs
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+        reservations:
+          memory: 1G
+          cpus: '0.5'
+    networks:
+      - backend-network
+      - frontend-network
+    depends_on:
+      - mongo-primary
+      - redis-master
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # MongoDB Replica Set for High Availability
+  mongo-primary:
     image: mongo:6.0
-    container_name: focusforge-mongo
-    restart: always
+    container_name: focusforge-mongo-primary
+    command: mongod --replSet rs0 --bind_ip_all --port 27017
     ports:
       - "27017:27017"
     volumes:
-      - mongo_data:/data/db
+      - mongo-primary-data:/data/db
+      - mongo-primary-config:/data/configdb
     environment:
       - MONGO_INITDB_DATABASE=${DATABASE_NAME:-focusforge}
       - MONGO_INITDB_ROOT_USERNAME=${MONGO_ROOT_USERNAME:-}
       - MONGO_INITDB_ROOT_PASSWORD=${MONGO_ROOT_PASSWORD:-}
     networks:
       - backend-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
-  # Redis - Backend Only
-  redis:
+  mongo-secondary:
+    image: mongo:6.0
+    container_name: focusforge-mongo-secondary
+    command: mongod --replSet rs0 --bind_ip_all --port 27017
+    ports:
+      - "27018:27017"
+    volumes:
+      - mongo-secondary-data:/data/db
+      - mongo-secondary-config:/data/configdb
+    environment:
+      - MONGO_INITDB_DATABASE=${DATABASE_NAME:-focusforge}
+    networks:
+      - backend-network
+    depends_on:
+      - mongo-primary
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # MongoDB replica set initialization
+  mongo-setup:
+    image: mongo:6.0
+    container_name: focusforge-mongo-setup
+    depends_on:
+      - mongo-primary
+      - mongo-secondary
+    networks:
+      - backend-network
+    restart: "no"
+    entrypoint: >
+      bash -c "
+        sleep 10 &&
+        mongosh --host mongo-primary:27017 --eval '
+          rs.initiate({
+            _id: \"rs0\",
+            members: [
+              {_id: 0, host: \"mongo-primary:27017\", priority: 2},
+              {_id: 1, host: \"mongo-secondary:27017\", priority: 1}
+            ]
+          })
+        ' &&
+        echo 'MongoDB replica set initialized'
+      "
+
+  # Redis Master-Slave for Caching and Background Tasks
+  redis-master:
     image: redis:7-alpine
-    container_name: focusforge-redis
-    restart: always
+    container_name: focusforge-redis-master
+    command: redis-server --appendonly yes --replica-announce-ip redis-master --replica-announce-port 6379
     ports:
       - "6379:6379"
     volumes:
-      - redis_data:/data
+      - redis-master-data:/data
     networks:
       - backend-network
-    command: redis-server --appendonly yes
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  redis-slave:
+    image: redis:7-alpine
+    container_name: focusforge-redis-slave
+    command: redis-server --appendonly yes --replicaof redis-master 6379
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis-slave-data:/data
+    depends_on:
+      - redis-master
+    networks:
+      - backend-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Background Task Workers
+  worker-general:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: focusforge-worker-general
+    command: python -m rq worker focusforge_tasks --with-scheduler --verbose
+    environment:
+      - WORKER_TYPE=general
+      - WORKER_ID=general-1
+      - MONGODB_URI=mongodb://mongo-primary:27017,mongo-secondary:27017/focusforge?replicaSet=rs0
+      - REDIS_URL=redis://redis-master:6379
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - DATABASE_NAME=${DATABASE_NAME:-focusforge}
+    volumes:
+      - worker-data:/app/data
+      - worker-logs:/app/logs
+    depends_on:
+      - redis-master
+      - mongo-primary
+    networks:
+      - backend-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+
+  worker-ai:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: focusforge-worker-ai
+    command: python -m rq worker ai_tasks --verbose
+    environment:
+      - WORKER_TYPE=ai_processing
+      - WORKER_ID=ai-1
+      - MONGODB_URI=mongodb://mongo-primary:27017,mongo-secondary:27017/focusforge?replicaSet=rs0
+      - REDIS_URL=redis://redis-master:6379
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - DATABASE_NAME=${DATABASE_NAME:-focusforge}
+    volumes:
+      - worker-data:/app/data
+      - worker-logs:/app/logs
+    depends_on:
+      - redis-master
+      - mongo-primary
+    networks:
+      - backend-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+
+  # Monitoring and Observability
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: focusforge-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    networks:
+      - monitoring-network
+      - backend-network
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: focusforge-grafana
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    networks:
+      - monitoring-network
+    depends_on:
+      - prometheus
+    restart: unless-stopped
 
 volumes:
-  mongo_data:
-  redis_data:
-  spotify_data:
+  # Database volumes
+  mongo-primary-data:
+    driver: local
+  mongo-secondary-data:
+    driver: local
+  mongo-primary-config:
+    driver: local
+  mongo-secondary-config:
+    driver: local
+  
+  # Cache volumes
+  redis-master-data:
+    driver: local
+  redis-slave-data:
+    driver: local
+  
+  # Application volumes
+  backend-data-1:
+    driver: local
+  backend-data-2:
+    driver: local
+  backend-logs-1:
+    driver: local
+  backend-logs-2:
+    driver: local
+  worker-data:
+    driver: local
+  worker-logs:
+    driver: local
+  
+  # Monitoring volumes
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
 
 networks:
+  frontend-network:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.20.0.0/16
+  
   backend-network:
     driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.21.0.0/16
+  
+  monitoring-network:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.22.0.0/16
