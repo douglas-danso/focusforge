@@ -12,6 +12,7 @@ from app.models.schemas import CalendarEvent, CalendarEventCreate
 from app.models.api_schemas import validate_user_id
 from app.core.database import get_database
 from app.core.auth import get_current_user_from_token
+from app.core.config import settings
 
 router = APIRouter()
 
@@ -87,6 +88,35 @@ async def get_google_calendar_status(
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to check status: {str(e)}")
+
+@router.get("/google/config-test")
+async def test_google_config():
+    """Test Google Calendar configuration (no auth required)"""
+    try:
+        calendar_service = CalendarService()
+        google_integration = calendar_service.google_calendar
+        
+        # Test configuration loading
+        try:
+            client_config = google_integration._get_client_config()
+            config_valid = True
+            config_error = None
+        except Exception as e:
+            config_valid = False
+            config_error = str(e)
+        
+        return {
+            "success": True,
+            "config_valid": config_valid,
+            "config_error": config_error,
+            "has_google_credentials": bool(settings.GOOGLE_CREDENTIALS and settings.GOOGLE_CREDENTIALS != "{}"),
+            "has_individual_vars": bool(settings.GOOGLE_CLIENT_ID and settings.GOOGLE_CLIENT_SECRET),
+            "redirect_uri": settings.GOOGLE_REDIRECT_URI,
+            "credentials_dir": settings.GOOGLE_CREDENTIALS_DIR,
+            "client_config_keys": list(client_config.get("web", {}).keys()) if config_valid else []
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Config test failed: {str(e)}")
 
 @router.post("/google/sync")
 async def sync_google_calendar(

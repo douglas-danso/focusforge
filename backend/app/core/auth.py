@@ -22,6 +22,7 @@ import logging
 from app.core.config import settings
 from app.core.database import get_database
 from app.models.schemas import User, UserCreate
+from bson import ObjectId
 
 logger = logging.getLogger(__name__)
 
@@ -295,7 +296,12 @@ async def get_current_user_from_token(
             )
         
         # Verify user still exists and is active
-        user = await db.users.find_one({"_id": user_id})
+        try:
+            user = await db.users.find_one({"_id": ObjectId(user_id)})
+        except Exception:
+            # If ObjectId conversion fails, try with string ID
+            user = await db.users.find_one({"_id": user_id})
+        
         if not user or not user.get("is_active", True):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -337,7 +343,12 @@ async def get_current_user_details(
             )
         
         # Get user from database
-        user_doc = await db.users.find_one({"_id": user_id})
+        try:
+            user_doc = await db.users.find_one({"_id": ObjectId(user_id)})
+        except Exception:
+            # If ObjectId conversion fails, try with string ID
+            user_doc = await db.users.find_one({"_id": user_id})
+        
         if not user_doc or not user_doc.get("is_active", True):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -378,3 +389,4 @@ def get_google_oauth_url() -> str:
     
     query_string = "&".join([f"{k}={v}" for k, v in params.items()])
     return f"{base_url}?{query_string}"
+

@@ -362,7 +362,7 @@ class AnalyticsResponse(BaseResponse):
 
 def validate_user_id(user_id: str) -> str:
     """Validate user ID format"""
-    if not user_id or len(user_id) < 3:
+    if not user_id:
         raise ValueError("Invalid user ID")
     return user_id
 

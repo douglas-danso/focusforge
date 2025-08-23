@@ -27,7 +27,8 @@ class Settings(BaseSettings):
     # Google OAuth settings (used for both Calendar and Authentication)
     GOOGLE_CLIENT_ID: str = os.getenv("GOOGLE_CLIENT_ID", "")
     GOOGLE_CLIENT_SECRET: str = os.getenv("GOOGLE_CLIENT_SECRET", "")
-    GOOGLE_REDIRECT_URI: str = os.getenv("GOOGLE_REDIRECT_URI", "http://localhost:8000/api/v1/auth/google/callback")
+    GOOGLE_REDIRECT_URI: str = os.getenv("GOOGLE_REDIRECT_URI", "http://localhost:8080/callback")
+    GOOGLE_CREDENTIALS: str = os.getenv("GOOGLE_CREDENTIALS", "{}")
     GOOGLE_CREDENTIALS_DIR: str = os.getenv("GOOGLE_CREDENTIALS_DIR", "./credentials")
     
     # JWT settings

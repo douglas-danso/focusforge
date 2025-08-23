@@ -25,7 +25,12 @@ from app.core.database import get_database
 logger = logging.getLogger(__name__)
 
 # Google Calendar API scopes
-SCOPES = ['https://www.googleapis.com/auth/calendar']
+SCOPES = [
+    'https://www.googleapis.com/auth/calendar',
+    'https://www.googleapis.com/auth/userinfo.email',
+    'https://www.googleapis.com/auth/userinfo.profile',
+    'openid'
+]
 
 class GoogleCalendarIntegration:
     """Google Calendar API integration"""
@@ -42,8 +47,19 @@ class GoogleCalendarIntegration:
     
     def _get_client_config(self) -> Dict[str, Any]:
         """Get Google OAuth client configuration"""
-        if not hasattr(settings, 'GOOGLE_CLIENT_ID') or not hasattr(settings, 'GOOGLE_CLIENT_SECRET'):
-            raise ValueError("Google Calendar credentials not configured")
+        # Try to parse credentials from environment first
+        if settings.GOOGLE_CREDENTIALS and settings.GOOGLE_CREDENTIALS != "{}":
+            try:
+                import json
+                credentials_json = json.loads(settings.GOOGLE_CREDENTIALS)
+                if "web" in credentials_json:
+                    return credentials_json
+            except (json.JSONDecodeError, KeyError) as e:
+                logger.warning(f"Failed to parse GOOGLE_CREDENTIALS: {e}")
+        
+        # Fallback to individual environment variables
+        if not settings.GOOGLE_CLIENT_ID or not settings.GOOGLE_CLIENT_SECRET:
+            raise ValueError("Google Calendar credentials not configured. Set GOOGLE_CREDENTIALS or GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET")
         
         return {
             "web": {
@@ -51,7 +67,8 @@ class GoogleCalendarIntegration:
                 "client_secret": settings.GOOGLE_CLIENT_SECRET,
                 "auth_uri": "https://accounts.google.com/o/oauth2/auth",
                 "token_uri": "https://oauth2.googleapis.com/token",
-                "redirect_uris": [getattr(settings, 'GOOGLE_REDIRECT_URI', 'http://localhost:8000/auth/google/callback')]
+                "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+                "redirect_uris": [settings.GOOGLE_REDIRECT_URI]
             }
         }
     
@@ -65,7 +82,8 @@ class GoogleCalendarIntegration:
             auth_url, _ = flow.authorization_url(
                 access_type='offline',
                 include_granted_scopes='true',
-                state=user_id
+                state=user_id,
+                prompt='consent'  # Force consent to ensure refresh token
             )
             
             # Cache flow for later token exchange
