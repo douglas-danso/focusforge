@@ -34,7 +34,7 @@ export default function Login() {
   const handleGoogleLogin = () => {
     try {
       // In a real app, this would redirect to the backend OAuth endpoint
-      const googleAuthUrl = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8004'}/api/v1/auth/google/url`;
+      const googleAuthUrl = `${import.meta.env.VITE_GOOGLE_REDIRECT_URI || 'http://localhost:8004'}/api/v1/auth/google/url`;
       window.location.href = googleAuthUrl;
     } catch (error) {
       addNotification({
@@ -64,17 +64,17 @@ export default function Login() {
                 transition={{ delay: 0.2, duration: 0.5 }}
                 className="flex items-center space-x-3"
               >
-                <div className="w-12 h-12 rounded-2xl bg-primary flex items-center justify-center">
-                  <span className="text-primary-foreground font-bold text-xl">F</span>
+                <div className="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center">
+                  <span className="text-white font-bold text-xl">F</span>
                 </div>
-                <h1 className="text-3xl font-bold text-foreground">FocusForge</h1>
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">FocusForge</h1>
               </motion.div>
               
               <motion.p
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4, duration: 0.5 }}
-                className="text-xl text-muted-foreground leading-relaxed"
+                className="text-xl text-gray-600 dark:text-gray-400 leading-relaxed"
               >
                 Transform your productivity with AI-powered task management, 
                 mood tracking, and personalized focus rituals.
@@ -94,16 +94,16 @@ export default function Login() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.8 + index * 0.1, duration: 0.5 }}
-                  className="flex space-x-3 p-4 rounded-xl bg-card/50 border border-border/50"
+                  className="flex space-x-3 p-4 rounded-xl bg-white/50 dark:bg-gray-900/50 border border-gray-200/50 dark:border-gray-700/50"
                 >
-                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                    <feature.icon className="h-5 w-5 text-primary" />
+                  <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center flex-shrink-0">
+                    <feature.icon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                   </div>
                   <div>
-                    <h3 className="font-medium text-sm text-foreground">
+                    <h3 className="font-medium text-sm text-gray-900 dark:text-gray-100">
                       {feature.title}
                     </h3>
-                    <p className="text-xs text-muted-foreground mt-1">
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                       {feature.description}
                     </p>
                   </div>
@@ -119,16 +119,16 @@ export default function Login() {
               className="flex space-x-8 pt-4"
             >
               <div>
-                <p className="text-2xl font-bold text-primary">25min</p>
-                <p className="text-sm text-muted-foreground">Focus blocks</p>
+                <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">25min</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Focus blocks</p>
               </div>
               <div>
-                <p className="text-2xl font-bold text-primary">AI</p>
-                <p className="text-sm text-muted-foreground">Task analysis</p>
+                <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">AI</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Task analysis</p>
               </div>
               <div>
-                <p className="text-2xl font-bold text-primary">∞</p>
-                <p className="text-sm text-muted-foreground">Possibilities</p>
+                <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">∞</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Possibilities</p>
               </div>
             </motion.div>
           </motion.div>
@@ -162,10 +162,10 @@ export default function Login() {
                 {/* Divider */}
                 <div className="relative">
                   <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-border" />
+                    <div className="w-full border-t border-gray-200 dark:border-gray-700" />
                   </div>
                   <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-card px-2 text-muted-foreground">
+                    <span className="bg-white dark:bg-gray-900 px-2 text-gray-600 dark:text-gray-400">
                       Quick & secure
                     </span>
                   </div>
@@ -173,11 +173,11 @@ export default function Login() {
 
                 {/* Benefits */}
                 <div className="space-y-3 text-center">
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
                     Join thousands of users who have transformed their productivity
                   </p>
                   
-                  <div className="flex justify-center space-x-6 text-xs text-muted-foreground">
+                  <div className="flex justify-center space-x-6 text-xs text-gray-600 dark:text-gray-400">
                     <span>✓ No password required</span>
                     <span>✓ Instant setup</span>
                     <span>✓ Sync across devices</span>
@@ -185,8 +185,8 @@ export default function Login() {
                 </div>
 
                 {/* Demo hint */}
-                <div className="p-4 bg-primary/5 border border-primary/20 rounded-xl">
-                  <p className="text-sm text-center text-primary/80">
+                <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl">
+                  <p className="text-sm text-center text-blue-700 dark:text-blue-300">
                     💡 First time? Your AI productivity coach will guide you through setup
                   </p>
                 </div>

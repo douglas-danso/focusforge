@@ -92,21 +92,21 @@ const TaskCard = ({ task, onEdit, onDelete, onStart }: TaskCardProps) => {
           <div className="flex items-start justify-between">
             <div className="flex-1 min-w-0">
               <div className="flex items-center space-x-2 mb-2">
-                <h3 className="font-medium text-foreground truncate">
+                <h3 className="font-medium text-gray-900 dark:text-gray-100 truncate">
                   {task.title}
                 </h3>
-                <span className="text-sm text-muted-foreground">
+                <span className="text-sm text-gray-600 dark:text-gray-400">
                   {getPriorityIcon(task.priority)}
                 </span>
               </div>
               
               {task.description && (
-                <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">
                   {task.description}
                 </p>
               )}
 
-              <div className="flex items-center space-x-4 text-xs text-muted-foreground mb-3">
+              <div className="flex items-center space-x-4 text-xs text-gray-600 dark:text-gray-400 mb-3">
                 <div className="flex items-center space-x-1">
                   <Clock className="h-3 w-3" />
                   <span>{formatMinutes(task.duration_minutes)}</span>
@@ -129,7 +129,7 @@ const TaskCard = ({ task, onEdit, onDelete, onStart }: TaskCardProps) => {
                 </span>
                 
                 {task.deadline && (
-                  <div className="flex items-center space-x-1 text-xs text-muted-foreground">
+                  <div className="flex items-center space-x-1 text-xs text-gray-600 dark:text-gray-400">
                     <Calendar className="h-3 w-3" />
                     <span>{formatDate(task.deadline)}</span>
                   </div>
@@ -156,17 +156,17 @@ const TaskCard = ({ task, onEdit, onDelete, onStart }: TaskCardProps) => {
                   <MoreVertical className="h-4 w-4" />
                 </Button>
                 
-                <div className="absolute right-0 top-full mt-1 w-32 bg-popover border border-border rounded-lg shadow-lg z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="absolute right-0 top-full mt-1 w-32 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-10 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
                     onClick={() => onEdit(task)}
-                    className="w-full px-3 py-2 text-left text-sm hover:bg-accent flex items-center space-x-2"
+                    className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center space-x-2"
                   >
                     <Edit3 className="h-3 w-3" />
                     <span>Edit</span>
                   </button>
                   <button
                     onClick={() => onDelete(task.id)}
-                    className="w-full px-3 py-2 text-left text-sm hover:bg-accent text-red-600 dark:text-red-400 flex items-center space-x-2"
+                    className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-800 text-red-600 dark:text-red-400 flex items-center space-x-2"
                   >
                     <Trash2 className="h-3 w-3" />
                     <span>Delete</span>
@@ -178,13 +178,13 @@ const TaskCard = ({ task, onEdit, onDelete, onStart }: TaskCardProps) => {
 
           {/* Progress bar */}
           <div className="mt-3">
-            <div className="flex justify-between text-xs text-muted-foreground mb-1">
+            <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400 mb-1">
               <span>Progress</span>
               <span>{Math.round((task.blocks_completed / task.estimated_blocks) * 100)}%</span>
             </div>
-            <div className="w-full bg-muted rounded-full h-2">
+            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
               <motion.div
-                className="bg-primary h-2 rounded-full"
+                className="bg-blue-600 h-2 rounded-full"
                 initial={{ width: 0 }}
                 animate={{ width: `${(task.blocks_completed / task.estimated_blocks) * 100}%` }}
                 transition={{ duration: 0.5 }}
@@ -278,8 +278,8 @@ export default function Tasks() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Tasks</h1>
-          <p className="text-muted-foreground mt-1">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Tasks</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-1">
             Manage your tasks with AI-powered breakdowns and Pomodoro timers
           </p>
         </div>
@@ -294,7 +294,7 @@ export default function Tasks() {
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="flex-1">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-600 dark:text-gray-400" />
             <Input
               placeholder="Search tasks..."
               value={searchQuery}
@@ -305,16 +305,16 @@ export default function Tasks() {
         </div>
 
         <div className="flex items-center space-x-2">
-          <Filter className="h-4 w-4 text-muted-foreground" />
-          <div className="flex bg-muted rounded-lg p-1">
+          <Filter className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+          <div className="flex bg-gray-200 dark:bg-gray-700 rounded-lg p-1">
             {filters.map((filter) => (
               <button
                 key={filter.key}
                 onClick={() => setSelectedFilter(filter.key)}
                 className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
                   selectedFilter === filter.key
-                    ? 'bg-background text-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground'
+                    ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 shadow-sm'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
                 }`}
               >
                 {filter.label}
@@ -329,18 +329,18 @@ export default function Tasks() {
       <div className="space-y-4">
         {isLoading ? (
           <div className="text-center py-12">
-            <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full mx-auto mb-4" />
-            <p className="text-muted-foreground">Loading tasks...</p>
+            <div className="animate-spin w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full mx-auto mb-4" />
+            <p className="text-gray-600 dark:text-gray-400">Loading tasks...</p>
           </div>
         ) : filteredTasks.length === 0 ? (
           <div className="text-center py-12">
-            <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
-              <CheckCircle className="h-8 w-8 text-muted-foreground" />
+            <div className="w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+              <CheckCircle className="h-8 w-8 text-gray-600 dark:text-gray-400" />
             </div>
-            <h3 className="text-lg font-medium text-foreground mb-2">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
               {searchQuery ? 'No tasks found' : 'No tasks yet'}
             </h3>
-            <p className="text-muted-foreground mb-4">
+            <p className="text-gray-600 dark:text-gray-400 mb-4">
               {searchQuery ? 'Try adjusting your search terms' : 'Create your first task to get started'}
             </p>
             {!searchQuery && (

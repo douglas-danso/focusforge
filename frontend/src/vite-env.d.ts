@@ -9,6 +9,7 @@ interface ImportMetaEnv {
   readonly VITE_ENABLE_ANALYTICS: string
   readonly VITE_ENABLE_NOTIFICATIONS: string
   readonly VITE_ENABLE_EXPERIMENTAL_FEATURES: string
+  readonly VITE_GOOGLE_REDIRECT_URI: string
 }
 
 interface ImportMeta {

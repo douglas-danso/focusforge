@@ -57,14 +57,14 @@ export default function Navbar() {
   const ThemeIcon = getThemeIcon();
 
   return (
-    <header className="bg-card border-b border-border">
+    <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
       <div className="flex items-center justify-between h-16 px-6">
         {/* Left side - Search */}
         <div className="flex items-center space-x-4 flex-1 max-w-md">
           <div className="relative w-full">
             <Input
               placeholder="Search tasks, moods, or rituals..."
-              className="pl-10 bg-background/50"
+              className="pl-10 bg-white/50 dark:bg-gray-900/50"
               leftIcon={<Search className="h-4 w-4" />}
             />
           </div>
@@ -87,7 +87,7 @@ export default function Navbar() {
               <motion.div
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
-                className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-primary-foreground text-xs font-bold rounded-full flex items-center justify-center"
+                className="absolute -top-1 -right-1 w-5 h-5 bg-blue-600 text-white text-xs font-bold rounded-full flex items-center justify-center"
               >
                 {activeRewards.length}
               </motion.div>
@@ -104,26 +104,26 @@ export default function Navbar() {
 
             <DropdownMenu.Portal>
               <DropdownMenu.Content
-                className="min-w-[8rem] bg-popover text-popover-foreground rounded-xl border border-border shadow-large p-1 z-50"
+                className="min-w-[8rem] bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg p-1 z-50"
                 align="end"
                 sideOffset={5}
               >
                 <DropdownMenu.Item
-                  className="flex items-center px-3 py-2 text-sm rounded-lg cursor-pointer hover:bg-accent hover:text-accent-foreground outline-none"
+                  className="flex items-center px-3 py-2 text-sm rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100 outline-none"
                   onClick={() => handleThemeChange('light')}
                 >
                   <Sun className="h-4 w-4 mr-2" />
                   Light
                 </DropdownMenu.Item>
                 <DropdownMenu.Item
-                  className="flex items-center px-3 py-2 text-sm rounded-lg cursor-pointer hover:bg-accent hover:text-accent-foreground outline-none"
+                  className="flex items-center px-3 py-2 text-sm rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100 outline-none"
                   onClick={() => handleThemeChange('dark')}
                 >
                   <Moon className="h-4 w-4 mr-2" />
                   Dark
                 </DropdownMenu.Item>
                 <DropdownMenu.Item
-                  className="flex items-center px-3 py-2 text-sm rounded-lg cursor-pointer hover:bg-accent hover:text-accent-foreground outline-none"
+                  className="flex items-center px-3 py-2 text-sm rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100 outline-none"
                   onClick={() => handleThemeChange('system')}
                 >
                   <Monitor className="h-4 w-4 mr-2" />
@@ -144,7 +144,7 @@ export default function Navbar() {
                     className="w-8 h-8 rounded-xl object-cover"
                   />
                 ) : (
-                  <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-xl bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center">
                     <User className="h-4 w-4" />
                   </div>
                 )}
@@ -156,17 +156,17 @@ export default function Navbar() {
 
             <DropdownMenu.Portal>
               <DropdownMenu.Content
-                className="min-w-[12rem] bg-popover text-popover-foreground rounded-xl border border-border shadow-large p-1 z-50"
+                className="min-w-[12rem] bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg p-1 z-50"
                 align="end"
                 sideOffset={5}
               >
-                <div className="px-3 py-2 border-b border-border mb-1">
+                <div className="px-3 py-2 border-b border-gray-200 dark:border-gray-700 mb-1">
                   <p className="font-medium text-sm">{user?.name}</p>
-                  <p className="text-xs text-muted-foreground">{user?.email}</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">{user?.email}</p>
                 </div>
 
                 <DropdownMenu.Item
-                  className="flex items-center px-3 py-2 text-sm rounded-lg cursor-pointer hover:bg-accent hover:text-accent-foreground outline-none"
+                  className="flex items-center px-3 py-2 text-sm rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100 outline-none"
                   onClick={() => {/* Navigate to profile */}}
                 >
                   <User className="h-4 w-4 mr-2" />
@@ -174,17 +174,17 @@ export default function Navbar() {
                 </DropdownMenu.Item>
 
                 <DropdownMenu.Item
-                  className="flex items-center px-3 py-2 text-sm rounded-lg cursor-pointer hover:bg-accent hover:text-accent-foreground outline-none"
+                  className="flex items-center px-3 py-2 text-sm rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100 outline-none"
                   onClick={() => {/* Navigate to settings */}}
                 >
                   <Settings className="h-4 w-4 mr-2" />
                   Settings
                 </DropdownMenu.Item>
 
-                <DropdownMenu.Separator className="h-px bg-border my-1" />
+                <DropdownMenu.Separator className="h-px bg-gray-200 dark:bg-gray-700 my-1" />
 
                 <DropdownMenu.Item
-                  className="flex items-center px-3 py-2 text-sm rounded-lg cursor-pointer hover:bg-destructive hover:text-destructive-foreground outline-none text-red-600 dark:text-red-400"
+                  className="flex items-center px-3 py-2 text-sm rounded-lg cursor-pointer hover:bg-red-100 dark:hover:bg-red-900/20 hover:text-red-900 dark:hover:text-red-100 outline-none text-red-600 dark:text-red-400"
                   onClick={handleLogout}
                 >
                   <LogOut className="h-4 w-4 mr-2" />

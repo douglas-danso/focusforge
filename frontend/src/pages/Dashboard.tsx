@@ -59,10 +59,10 @@ export default function Dashboard() {
         className="flex items-center justify-between"
       >
         <div>
-          <h1 className="text-3xl font-bold text-foreground">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
             Good {getTimeOfDay()}, {user?.name?.split(' ')[0]}! 👋
           </h1>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-gray-600 dark:text-gray-400 mt-1">
             Ready to make today productive?
           </p>
         </div>
@@ -86,12 +86,12 @@ export default function Dashboard() {
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                <Target className="h-6 w-6 text-primary" />
+              <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center">
+                <Target className="h-6 w-6 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Today's Progress</p>
-                <p className="text-2xl font-bold text-foreground">
+                <p className="text-sm text-gray-600 dark:text-gray-400">Today's Progress</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                   {stats.tasksCompleted}/{stats.totalTasks}
                 </p>
               </div>
@@ -106,8 +106,8 @@ export default function Dashboard() {
                 <Clock className="h-6 w-6 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Focus Time</p>
-                <p className="text-2xl font-bold text-foreground">
+                <p className="text-sm text-gray-600 dark:text-gray-400">Focus Time</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                   {Math.floor(stats.focusTime / 60)}h {stats.focusTime % 60}m
                 </p>
               </div>
@@ -122,8 +122,8 @@ export default function Dashboard() {
                 <Flame className="h-6 w-6 text-orange-600 dark:text-orange-400" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Streak</p>
-                <p className="text-2xl font-bold text-foreground">
+                <p className="text-sm text-gray-600 dark:text-gray-400">Streak</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                   {stats.streak} days
                 </p>
               </div>
@@ -138,8 +138,8 @@ export default function Dashboard() {
                 <TrendingUp className="h-6 w-6 text-green-600 dark:text-green-400" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Mood Score</p>
-                <p className="text-2xl font-bold text-foreground">
+                <p className="text-sm text-gray-600 dark:text-gray-400">Mood Score</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                   {stats.averageMood}/10
                 </p>
               </div>

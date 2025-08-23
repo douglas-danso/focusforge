@@ -75,11 +75,11 @@ export default function AITipCard() {
   const tip = aiTips[currentTip];
 
   return (
-    <Card className="bg-gradient-to-br from-primary/5 via-background to-primary/10 border-primary/20">
+    <Card className="bg-gradient-to-br from-blue-50 dark:from-blue-900/20 via-white dark:via-gray-900 to-blue-50 dark:to-blue-900/20 border-blue-200 dark:border-blue-800">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center justify-between text-lg">
           <div className="flex items-center space-x-2">
-            <Brain className="h-5 w-5 text-primary" />
+            <Brain className="h-5 w-5 text-blue-600 dark:text-blue-400" />
             <span>AI Insight</span>
           </div>
           
@@ -105,22 +105,22 @@ export default function AITipCard() {
         >
           {/* Tip header */}
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center">
               <span className="text-lg">{tip.icon}</span>
             </div>
             
             <div>
-              <h4 className="font-medium text-sm text-foreground">
+              <h4 className="font-medium text-sm text-gray-900 dark:text-gray-100">
                 {tip.title}
               </h4>
-              <p className="text-xs text-muted-foreground capitalize">
+              <p className="text-xs text-gray-600 dark:text-gray-400 capitalize">
                 {tip.type} tip
               </p>
             </div>
           </div>
 
           {/* Tip content */}
-          <p className="text-sm text-foreground leading-relaxed">
+          <p className="text-sm text-gray-900 dark:text-gray-100 leading-relaxed">
             {tip.tip}
           </p>
         </motion.div>
@@ -131,7 +131,7 @@ export default function AITipCard() {
             <motion.button
               key={index}
               className={`w-2 h-2 rounded-full transition-colors ${
-                index === currentTip ? 'bg-primary' : 'bg-primary/20'
+                index === currentTip ? 'bg-blue-600' : 'bg-blue-200 dark:bg-blue-800'
               }`}
               onClick={() => setCurrentTip(index)}
               whileHover={{ scale: 1.2 }}
@@ -141,8 +141,8 @@ export default function AITipCard() {
         </div>
 
         {/* Action hint */}
-        <div className="pt-2 border-t border-border">
-          <div className="flex items-center space-x-2 text-primary">
+        <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+          <div className="flex items-center space-x-2 text-blue-600 dark:text-blue-400">
             <Lightbulb className="h-4 w-4" />
             <p className="text-xs font-medium">
               Tip: These insights are personalized based on your productivity patterns

@@ -13,17 +13,17 @@ export default function TaskDetail() {
       className="space-y-8"
     >
       <div>
-        <h1 className="text-3xl font-bold text-foreground">Task Detail</h1>
-        <p className="text-muted-foreground mt-1">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Task Detail</h1>
+        <p className="text-gray-600 dark:text-gray-400 mt-1">
           Task ID: {taskId}
         </p>
       </div>
 
       <div className="text-center py-16">
-        <h2 className="text-xl font-semibold text-foreground mb-2">
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
           Task Detail Page Coming Soon
         </h2>
-        <p className="text-muted-foreground">
+        <p className="text-gray-600 dark:text-gray-400">
           Detailed task view with AI insights, Pomodoro timer, and proof submission will be implemented here.
         </p>
       </div>

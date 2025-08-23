@@ -328,7 +328,7 @@ services:
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-252360340708-i76a2nhg5cllpgg16t70a9lahi2dosjn.apps.googleusercontent.com}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-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}
       GOOGLE_CREDENTIALS: '{"web":{"client_id":"252360340708-i76a2nhg5cllpgg16t70a9lahi2dosjn.apps.googleusercontent.com","project_id":"focusforge-469802","auth_uri":"https://accounts.google.com/o/oauth2/auth","token_uri":"https://oauth2.googleapis.com/token","auth_provider_x509_cert_url":"https://www.googleapis.com/oauth2/v1/certs","client_secret":"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","redirect_uris":["http://localhost:3000/auth/callback"]}}'
-      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-http://localhost:3000/auth/callback}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI}
       GOOGLE_CREDENTIALS_DIR: ${GOOGLE_CREDENTIALS_DIR:-./credentials}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
       DATABASE_NAME: ${DATABASE_NAME:-focusforge}

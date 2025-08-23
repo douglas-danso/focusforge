@@ -58,14 +58,14 @@ export default function Sidebar() {
         }}
         transition={{ duration: 0.3, ease: 'easeInOut' }}
         className={`
-          fixed left-0 top-0 h-screen bg-card border-r border-border z-50
+          fixed left-0 top-0 h-screen bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 z-50
           ${sidebarOpen ? 'w-64' : 'w-16'}
           lg:relative lg:z-auto
         `}
       >
         <div className="flex flex-col h-full">
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-border">
+          <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
             <motion.div
               animate={{
                 opacity: sidebarOpen ? 1 : 0,
@@ -74,11 +74,11 @@ export default function Sidebar() {
               transition={{ duration: 0.2 }}
               className="flex items-center space-x-3"
             >
-              <div className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center">
-                <span className="text-primary-foreground font-bold text-sm">F</span>
+              <div className="w-8 h-8 rounded-xl bg-blue-600 flex items-center justify-center">
+                <span className="text-white font-bold text-sm">F</span>
               </div>
               {sidebarOpen && (
-                <span className="font-bold text-lg text-foreground">FocusForge</span>
+                <span className="font-bold text-lg text-gray-900 dark:text-gray-100">FocusForge</span>
               )}
             </motion.div>
 
@@ -101,17 +101,17 @@ export default function Sidebar() {
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="p-4 border-b border-border"
+              className="p-4 border-b border-gray-200 dark:border-gray-700"
             >
-              <div className="flex items-center space-x-3 bg-primary/10 rounded-xl p-3">
-                <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-                  <span className="text-sm font-medium text-primary">
+              <div className="flex items-center space-x-3 bg-blue-100 dark:bg-blue-900/20 rounded-xl p-3">
+                <div className="w-8 h-8 rounded-full bg-blue-200 dark:bg-blue-800 flex items-center justify-center">
+                  <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
                     {userProfile.currency_balance.toLocaleString()}
                   </span>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Balance</p>
-                  <p className="font-bold text-lg text-primary">
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Balance</p>
+                  <p className="font-bold text-lg text-blue-600 dark:text-blue-400">
                     {userProfile.currency_balance.toLocaleString()}
                   </p>
                 </div>
@@ -129,7 +129,7 @@ export default function Sidebar() {
                   key={item.name}
                   to={item.href}
                   className={({ isActive }) =>
-                    `nav-item ${isActive ? 'active' : ''} ${
+                    `flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200 ${isActive ? 'text-blue-600 bg-blue-100 dark:bg-blue-900/20 hover:bg-blue-150' : ''} ${
                       !sidebarOpen ? 'justify-center' : ''
                     }`
                   }
@@ -149,7 +149,7 @@ export default function Sidebar() {
                   {isActive && !sidebarOpen && (
                     <motion.div
                       layoutId="sidebar-active"
-                      className="absolute right-0 w-1 h-6 bg-primary rounded-l-full"
+                      className="absolute right-0 w-1 h-6 bg-blue-600 rounded-l-full"
                     />
                   )}
                 </NavLink>
@@ -158,7 +158,7 @@ export default function Sidebar() {
           </nav>
 
           {/* Bottom navigation */}
-          <div className="px-4 py-4 border-t border-border space-y-2">
+          <div className="px-4 py-4 border-t border-gray-200 dark:border-gray-700 space-y-2">
             {bottomNavigation.map((item) => {
               const isActive = location.pathname === item.href;
               
@@ -167,7 +167,7 @@ export default function Sidebar() {
                   key={item.name}
                   to={item.href}
                   className={({ isActive }) =>
-                    `nav-item ${isActive ? 'active' : ''} ${
+                    `flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200 ${isActive ? 'text-blue-600 bg-blue-100 dark:bg-blue-900/20 hover:bg-blue-150' : ''} ${
                       !sidebarOpen ? 'justify-center' : ''
                     }`
                   }

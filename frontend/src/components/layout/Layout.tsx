@@ -12,7 +12,7 @@ export default function Layout({ children }: LayoutProps) {
   const sidebarOpen = useSidebarOpen();
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex h-screen bg-white dark:bg-gray-900">
       {/* Sidebar */}
       <Sidebar />
       
