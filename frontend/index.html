@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FocusForge - AI-Powered Productivity</title>
+    <meta name="description" content="Transform your productivity with AI-powered task management, mood tracking, and personalized focus rituals." />
+    
+    <!-- Preconnect to Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    
+    <!-- Prevent flash of unstyled content -->
+    <script>
+      // Apply theme immediately to prevent FOUC
+      (function() {
+        const theme = localStorage.getItem('focusforge-ui') ? 
+          JSON.parse(localStorage.getItem('focusforge-ui')).state.theme : 'system';
+        
+        if (theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.classList.add('dark');
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
